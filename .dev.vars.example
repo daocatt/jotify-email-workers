@@ -6,3 +6,6 @@ CRON_TOKEN="f8c144fa73d6e5be15c2d3a948e9c1db4402a8e6b12dfcde6a88b56f2f2c8db9"
 
 # Your email receiving domain (e.g. "zwq.me")
 INBOUND_DOMAIN="zwq.me"
+
+# Inbound API Ingestion Token generated from the Jotify Admin Console
+INBOUND_API_TOKEN="your_generated_inbound_api_token"
