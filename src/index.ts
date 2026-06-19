@@ -5,6 +5,8 @@ interface Env {
     CRON_TOKEN: string;
     /** The inbound mail domain, e.g. "zwq.me" */
     INBOUND_DOMAIN: string;
+    /** Token to authorize inbound email posting to Jotify API */
+    INBOUND_API_TOKEN: string;
 }
 
 export default {
@@ -74,6 +76,7 @@ async function forwardRawMimeToJotify(message: ForwardableEmailMessage, env: Env
             method: 'POST',
             headers: {
                 'Content-Type': 'application/octet-stream',
+                'X-Inbound-Token': env.INBOUND_API_TOKEN,
             },
             body: rawEmail,
         });
