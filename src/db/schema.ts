@@ -137,3 +137,22 @@ export const webhookRules = sqliteTable('webhook_rules', {
     webhookIdIdx: index('webhook_rules_webhook_id_idx').on(table.webhookId),
   };
 });
+
+// ── Failed Webhooks Persistence ──────────────────────────────────────────────
+
+export const failedWebhooks = sqliteTable('failed_webhooks', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('userId').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  webhookId: integer('webhookId').notNull().references(() => webhooks.id, { onDelete: 'cascade' }),
+  url: text('url').notNull(),
+  headers: text('headers').notNull(), // JSON string representing headers
+  payload: text('payload').notNull(), // JSON string representing webhook payload
+  attempts: integer('attempts').notNull().default(0),
+  createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull(),
+}, (table) => {
+  return {
+    userIdIdx: index('failed_webhooks_user_id_idx').on(table.userId),
+    webhookIdIdx: index('failed_webhooks_webhook_id_idx').on(table.webhookId),
+  };
+});
