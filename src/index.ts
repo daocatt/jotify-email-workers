@@ -24,6 +24,8 @@ interface Bindings {
   SUPERADMIN_PASSWORD?: string;
   TURNSTILE_SITE_KEY?: string;
   TURNSTILE_SECRET_KEY?: string;
+  ATTACHMENT_BUCKET?: R2Bucket;
+  R2_PUBLIC_URL?: string;
 }
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -129,7 +131,7 @@ app.use('*', async (c, next) => {
         .where(eq(schema.user.email, adminEmail));
       console.log('✅ Superadmin seeded successfully.');
     } catch (err: any) {
-      console.error('❌ Superadmin seeding failed:', err.message);
+      console.error('❌ Superadmin seeding failed:', err);
     }
   }
   await next();
@@ -905,12 +907,41 @@ export default {
           const subject = parsed.subject || '';
           const text = parsed.text || stripHtml(parsed.html || '');
 
+          const attachmentUrls: Array<{ filename: string; mimeType: string; size: number; url: string }> = [];
+          if (env.ATTACHMENT_BUCKET && env.R2_PUBLIC_URL && parsed.attachments && parsed.attachments.length > 0) {
+            for (const att of parsed.attachments) {
+              const dateStr = new Date().toISOString().slice(0, 7).replace('-', ''); // e.g. 202606
+              const uniqueId = crypto.randomUUID();
+              const safeFilename = att.filename ? att.filename.replace(/[^a-zA-Z0-9.\-_]/g, '_') : 'unnamed';
+              const r2Key = `${dateStr}/${uniqueId}/${safeFilename}`;
+              
+              await env.ATTACHMENT_BUCKET.put(r2Key, att.content, {
+                httpMetadata: {
+                  contentType: att.mimeType || 'application/octet-stream',
+                  contentDisposition: `attachment; filename*=UTF-8''${encodeURIComponent(att.filename || 'attachment')}`
+                }
+              });
+
+              const publicUrl = env.R2_PUBLIC_URL.endsWith('/') 
+                ? `${env.R2_PUBLIC_URL}${r2Key}` 
+                : `${env.R2_PUBLIC_URL}/${r2Key}`;
+
+              attachmentUrls.push({
+                filename: att.filename || 'unnamed',
+                mimeType: att.mimeType || 'application/octet-stream',
+                size: att.content.byteLength,
+                url: publicUrl
+              });
+            }
+          }
+
           const payload = {
             to: to,
             from: from,
             subject,
             text,
             rawSize: message.rawSize,
+            attachments: attachmentUrls,
           };
 
           const headers: Record<string, string> = {
