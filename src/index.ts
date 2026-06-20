@@ -69,6 +69,42 @@ async function verifyTurnstile(token: string | undefined, secretKey: string | un
   }
 }
 
+async function deliverWebhookWithRetry(
+  url: string, 
+  headers: Record<string, string>, 
+  payload: any, 
+  retries = 2, 
+  timeoutMs = 15000
+): Promise<void> {
+  let attempt = 0;
+  while (attempt <= retries) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      clearTimeout(id);
+      if (res.ok) {
+        console.log(`[Email Worker] Webhook delivered successfully to ${url} (status: ${res.status}, attempt: ${attempt + 1})`);
+        return;
+      }
+      console.warn(`[Email Worker] Webhook returned status ${res.status} from ${url} (attempt: ${attempt + 1}/${retries + 1})`);
+    } catch (err: any) {
+      clearTimeout(id);
+      console.error(`[Email Worker] Webhook attempt ${attempt + 1} failed for ${url}:`, err.message || err);
+    }
+    attempt++;
+    if (attempt <= retries) {
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+    }
+  }
+  console.error(`[Email Worker] Webhook delivery failed after ${retries + 1} attempts for ${url}`);
+}
+
 // ── Superadmin Autoseeding Middleware ────────────────────────────────────────
 
 app.use('*', async (c, next) => {
@@ -860,17 +896,7 @@ export default {
           }
 
           ctx.waitUntil(
-            fetch(w.webhook.url, {
-              method: 'POST',
-              headers,
-              body: JSON.stringify(payload),
-            })
-            .then(res => {
-              console.log(`[Email Worker] Webhook response status: ${res.status}`);
-            })
-            .catch(err => {
-              console.error(`[Email Worker] Webhook call failed:`, err);
-            })
+            deliverWebhookWithRetry(w.webhook.url, headers, payload)
           );
 
           webhookMatched = true;

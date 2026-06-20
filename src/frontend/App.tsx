@@ -20,10 +20,25 @@ export default function App() {
   const [authError, setAuthError] = useState('');
   const [authSuccess, setAuthSuccess] = useState('');
   const [turnstileToken, setTurnstileToken] = useState('');
+  const [turnstileLoaded, setTurnstileLoaded] = useState(!!(window as any).turnstile);
 
   useEffect(() => {
     setTurnstileToken('');
   }, [view]);
+
+  useEffect(() => {
+    if ((window as any).turnstile) {
+      setTurnstileLoaded(true);
+      return;
+    }
+    const interval = setInterval(() => {
+      if ((window as any).turnstile) {
+        setTurnstileLoaded(true);
+        clearInterval(interval);
+      }
+    }, 200);
+    return () => clearInterval(interval);
+  }, []);
 
   // Config states
   const [config, setConfig] = useState<any>({ allowRegister: true, requireApproval: true, maxDomainsPerUser: 1 });
@@ -627,6 +642,7 @@ export default function App() {
 
               {config.turnstileSiteKey && (
                 <div 
+                  key={`turnstile-${turnstileLoaded}`}
                   ref={(el) => {
                     if (el && el.childNodes.length === 0 && (window as any).turnstile) {
                       try {
