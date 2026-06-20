@@ -723,72 +723,90 @@ export default function App() {
       <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row gap-8">
 
         {/* Left navigation sidebar */}
-        <aside className={`${mobileMenuOpen ? 'flex' : 'hidden'} md:flex w-full md:w-56 shrink-0 flex-col gap-1.5`}>
-          <button
-            onClick={() => { setActiveTab('domains'); setMobileMenuOpen(false); }}
-            className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'domains' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
-              }`}
-          >
-            <Globe className="h-4 w-4" />
-            收信域名管理
-          </button>
-
-          <button
-            onClick={() => { setActiveTab('destinations'); setMobileMenuOpen(false); }}
-            className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'destinations' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
-              }`}
-          >
-            <Mail className="h-4 w-4" />
-            转发目标邮箱
-          </button>
-
-          <button
-            onClick={() => { setActiveTab('forwardRules'); setMobileMenuOpen(false); }}
-            className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'forwardRules' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
-              }`}
-          >
-            <Link className="h-4 w-4" />
-            邮箱转发规则
-          </button>
-
-          <button
-            onClick={() => { setActiveTab('webhooks'); setMobileMenuOpen(false); }}
-            className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'webhooks' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
-              }`}
-          >
-            <Server className="h-4 w-4" />
-            Webhook 接口
-          </button>
-
-          <button
-            onClick={() => { setActiveTab('webhookRules'); setMobileMenuOpen(false); }}
-            className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'webhookRules' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
-              }`}
-          >
-            <Link className="h-4 w-4" />
-            API 集成规则
-          </button>
-
-          {isAdmin && (
+        <aside className={`${mobileMenuOpen ? 'flex' : 'hidden'} md:flex w-full md:w-56 shrink-0 flex-col gap-4`}>
+          {/* Group 0: Basic Config */}
+          <div className="flex flex-col gap-1">
+            <div className="px-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">基础配置</div>
             <button
-              onClick={() => { setActiveTab('admin'); setMobileMenuOpen(false); }}
-              className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'admin' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+              onClick={() => { setActiveTab('domains'); setMobileMenuOpen(false); }}
+              className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'domains' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
                 }`}
             >
-              <Users className="h-4 w-4" />
-              审核注册用户
+              <Globe className="h-4 w-4" />
+              收信域名管理
             </button>
-          )}
+          </div>
 
-          {isSuperadmin && (
+          {/* Group 1: Mail Forwarding */}
+          <div className="flex flex-col gap-1 border-l-2 border-indigo-100 pl-2">
+            <div className="px-2 text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-1.5">邮件转发设置</div>
             <button
-              onClick={() => { setActiveTab('superadmin'); setMobileMenuOpen(false); }}
-              className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'superadmin' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+              onClick={() => { setActiveTab('destinations'); setMobileMenuOpen(false); }}
+              className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'destinations' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
                 }`}
             >
-              <Users className="h-4 w-4" />
-              管理管理员
+              <Mail className="h-4 w-4" />
+              转发目标邮箱
             </button>
+
+            <button
+              onClick={() => { setActiveTab('forwardRules'); setMobileMenuOpen(false); }}
+              className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'forwardRules' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+                }`}
+            >
+              <Link className="h-4 w-4" />
+              邮箱转发规则
+            </button>
+          </div>
+
+          {/* Group 2: Webhooks / API */}
+          <div className="flex flex-col gap-1 border-l-2 border-emerald-100 pl-2">
+            <div className="px-2 text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-1.5">API 集成设置</div>
+            <button
+              onClick={() => { setActiveTab('webhooks'); setMobileMenuOpen(false); }}
+              className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'webhooks' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+                }`}
+            >
+              <Server className="h-4 w-4" />
+              Webhook 接口
+            </button>
+
+            <button
+              onClick={() => { setActiveTab('webhookRules'); setMobileMenuOpen(false); }}
+              className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'webhookRules' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+                }`}
+            >
+              <Link className="h-4 w-4" />
+              API 集成规则
+            </button>
+          </div>
+
+          {/* Group 3: Admin Actions */}
+          {(isAdmin || isSuperadmin) && (
+            <div className="flex flex-col gap-1 border-t border-gray-150 pt-3 mt-1">
+              <div className="px-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">系统管理</div>
+              {isAdmin && (
+                <button
+                  onClick={() => { setActiveTab('admin'); setMobileMenuOpen(false); }}
+                  className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'admin' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+                    }`}
+                >
+                  <Users className="h-4 w-4" />
+                  审核注册用户
+                </button>
+              )}
+
+              {isSuperadmin && (
+                <button
+                  onClick={() => { setActiveTab('superadmin'); setMobileMenuOpen(false); }}
+                  className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'superadmin' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+                    }`}
+                >
+                  <Users className="h-4 w-4" />
+                  管理管理员
+                </button>
+              )}
+            </div>
           )}
         </aside>
 
