@@ -76,8 +76,9 @@ async function deliverWebhookWithRetry(
   headers: Record<string, string>, 
   payload: any, 
   retries = 2, 
-  timeoutMs = 15000
-): Promise<void> {
+  timeoutMs = 15000,
+  dbParams?: { db: any; userId: string; webhookId: number }
+): Promise<boolean> {
   let attempt = 0;
   while (attempt <= retries) {
     const controller = new AbortController();
@@ -92,7 +93,7 @@ async function deliverWebhookWithRetry(
       clearTimeout(id);
       if (res.ok) {
         console.log(`[Email Worker] Webhook delivered successfully to ${url} (status: ${res.status}, attempt: ${attempt + 1})`);
-        return;
+        return true;
       }
       console.warn(`[Email Worker] Webhook returned status ${res.status} from ${url} (attempt: ${attempt + 1}/${retries + 1})`);
     } catch (err: any) {
@@ -105,6 +106,26 @@ async function deliverWebhookWithRetry(
     }
   }
   console.error(`[Email Worker] Webhook delivery failed after ${retries + 1} attempts for ${url}`);
+
+  if (dbParams) {
+    try {
+      console.log(`[Email Worker] Persisting failed webhook for URL: ${url} to D1...`);
+      await dbParams.db.insert(schema.failedWebhooks).values({
+        userId: dbParams.userId,
+        webhookId: dbParams.webhookId,
+        url,
+        headers: JSON.stringify(headers),
+        payload: JSON.stringify(payload),
+        attempts: attempt, // Save initial attempts count
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      console.log(`[Email Worker] Failed webhook successfully persisted.`);
+    } catch (err: any) {
+      console.error(`[Email Worker] Failed to persist failed webhook:`, err.message || err);
+    }
+  }
+  return false;
 }
 
 // ── Superadmin Autoseeding Middleware ────────────────────────────────────────
@@ -959,7 +980,14 @@ export default {
           }
 
           ctx.waitUntil(
-            deliverWebhookWithRetry(w.webhook.url, headers, payload)
+            deliverWebhookWithRetry(
+              w.webhook.url, 
+              headers, 
+              payload, 
+              2, 
+              15000, 
+              { db, userId: domainMatched.userId, webhookId: w.webhook.id }
+            )
           );
 
           webhookMatched = true;
@@ -975,5 +1003,82 @@ export default {
 
     console.warn(`[Email Worker] No rule matched for ${to}, rejecting.`);
     message.setReject('Address not allowed');
+  },
+
+  // Cloudflare Scheduled Cron Trigger Handler
+  async scheduled(event: any, env: Bindings, ctx: ExecutionContext): Promise<void> {
+    console.log(`[Scheduled Worker] Running cron trigger to retry failed webhooks...`);
+    const db = getDb(env.DB);
+    const now = new Date();
+
+    try {
+      // Fetch all failed webhooks from D1 database
+      const failedList = await db.select().from(schema.failedWebhooks);
+
+      for (const record of failedList) {
+        const createdAt = new Date(record.createdAt);
+        const updatedAt = new Date(record.updatedAt);
+        const timeSinceCreated = now.getTime() - createdAt.getTime();
+        const timeSinceUpdated = now.getTime() - updatedAt.getTime();
+
+        // 1. Check if expired (24 hours = 86,400,000 ms) or maximum attempts reached (20)
+        if (record.attempts >= 20 || timeSinceCreated >= 24 * 60 * 60 * 1000) {
+          console.warn(`[Scheduled Worker] Webhook ID ${record.id} has failed ${record.attempts} times or exceeded 24 hours. Deleting and discarding (dead-letter).`);
+          await db.delete(schema.failedWebhooks).where(eq(schema.failedWebhooks.id, record.id));
+          continue;
+        }
+
+        // 2. Determine if it is eligible for retry based on paced delay:
+        let isEligible = false;
+        if (record.attempts < 10) {
+          // First 10 times: retry every 5 minutes (300,000 ms)
+          isEligible = timeSinceUpdated >= 5 * 60 * 1000;
+        } else if (record.attempts < 15) {
+          // 10-15 times: retry every 1 hour (3,600,000 ms)
+          isEligible = timeSinceUpdated >= 60 * 60 * 1000;
+        } else {
+          // 15-20 times: retry every 3 hours (10,800,000 ms)
+          isEligible = timeSinceUpdated >= 3 * 60 * 60 * 1000;
+        }
+
+        if (!isEligible) {
+          continue;
+        }
+
+        // 3. Perform retry inside waitUntil context
+        console.log(`[Scheduled Worker] Retrying Webhook ID ${record.id} (Attempt: ${record.attempts + 1}, URL: ${record.url})...`);
+
+        ctx.waitUntil((async () => {
+          let headers: Record<string, string> = {};
+          let payload: any = {};
+          try {
+            headers = JSON.parse(record.headers);
+            payload = JSON.parse(record.payload);
+          } catch (err) {
+            console.error(`[Scheduled Worker] Failed to parse headers or payload for record ID ${record.id}. Deleting record.`);
+            await db.delete(schema.failedWebhooks).where(eq(schema.failedWebhooks.id, record.id));
+            return;
+          }
+
+          // Single attempt (retries = 0)
+          const success = await deliverWebhookWithRetry(record.url, headers, payload, 0, 15000);
+          if (success) {
+            console.log(`[Scheduled Worker] Webhook ID ${record.id} delivered successfully on retry. Deleting record.`);
+            await db.delete(schema.failedWebhooks).where(eq(schema.failedWebhooks.id, record.id));
+          } else {
+            const nextAttempts = record.attempts + 1;
+            console.warn(`[Scheduled Worker] Webhook ID ${record.id} retry failed. Incrementing attempts to ${nextAttempts}.`);
+            await db.update(schema.failedWebhooks)
+              .set({
+                attempts: nextAttempts,
+                updatedAt: new Date(),
+              })
+              .where(eq(schema.failedWebhooks.id, record.id));
+          }
+        })());
+      }
+    } catch (err: any) {
+      console.error(`[Scheduled Worker] Error running cron trigger:`, err.message || err);
+    }
   }
 };

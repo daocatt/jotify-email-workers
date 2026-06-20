@@ -23,6 +23,11 @@
     }
   ],
   "workers_dev": false,
+  "triggers": {
+    "crons": [
+      "*/5 * * * *"
+    ]
+  },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS"
