@@ -22,6 +22,8 @@ interface Bindings {
   RESEND_FROM_EMAIL?: string;
   SUPERADMIN_EMAIL?: string;
   SUPERADMIN_PASSWORD?: string;
+  TURNSTILE_SITE_KEY?: string;
+  TURNSTILE_SECRET_KEY?: string;
 }
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -46,6 +48,25 @@ async function getSessionUser(c: any) {
   const u = await db.select().from(schema.user).where(eq(schema.user.id, session.user.id)).then(r => r[0]);
   if (!u || u.status !== 'approved') return null;
   return { ...session, dbUser: u };
+}
+
+async function verifyTurnstile(token: string | undefined, secretKey: string | undefined): Promise<boolean> {
+  if (!secretKey) return true; // If Turnstile is not configured, bypass
+  if (!token) return false;
+  try {
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: `secret=${encodeURIComponent(secretKey)}&response=${encodeURIComponent(token)}`,
+    });
+    const data = await res.json() as any;
+    return !!data.success;
+  } catch (err) {
+    console.error('Turnstile verification error:', err);
+    return false;
+  }
 }
 
 // ── Superadmin Autoseeding Middleware ────────────────────────────────────────
@@ -79,6 +100,25 @@ app.use('*', async (c, next) => {
 });
 
 // ── Better Auth Middleware ───────────────────────────────────────────────────
+
+// Intercept Better Auth sign-in to verify Turnstile if configured
+app.post('/api/auth/sign-in/email', async (c, next) => {
+  if (c.env.TURNSTILE_SECRET_KEY) {
+    try {
+      const bodyText = await c.req.text();
+      const body = JSON.parse(bodyText);
+      const ok = await verifyTurnstile(body.turnstileToken, c.env.TURNSTILE_SECRET_KEY);
+      if (!ok) {
+        return c.json({ message: 'Turnstile 验证失败' }, 400);
+      }
+      // Reconstruct request body stream for Better Auth
+      c.req.raw = new Request(c.req.raw, { body: bodyText });
+    } catch (err) {
+      return c.json({ message: '请求格式错误' }, 400);
+    }
+  }
+  await next();
+});
 
 app.on(['GET', 'POST'], '/api/auth/*', async (c) => {
   const auth = getAuth(c.env.DB, c.env.BETTER_AUTH_SECRET, c.env.BETTER_AUTH_URL);
@@ -161,7 +201,14 @@ app.post('/api/public/send-code', async (c) => {
 
 // Register account
 app.post('/api/public/register', async (c) => {
-  const { email, password, name, code } = await c.req.json();
+  const body = await c.req.json();
+  const { email, password, name, code, turnstileToken } = body;
+  if (c.env.TURNSTILE_SECRET_KEY) {
+    const ok = await verifyTurnstile(turnstileToken, c.env.TURNSTILE_SECRET_KEY);
+    if (!ok) {
+      return c.json({ error: 'Turnstile 验证失败' }, 400);
+    }
+  }
   if (!email || !password || !name || !code) {
     return c.json({ error: 'Missing parameters' }, 400);
   }
@@ -208,7 +255,14 @@ app.post('/api/public/register', async (c) => {
 
 // Reset Password
 app.post('/api/public/reset-password', async (c) => {
-  const { email, password, code } = await c.req.json();
+  const body = await c.req.json();
+  const { email, password, code, turnstileToken } = body;
+  if (c.env.TURNSTILE_SECRET_KEY) {
+    const ok = await verifyTurnstile(turnstileToken, c.env.TURNSTILE_SECRET_KEY);
+    if (!ok) {
+      return c.json({ error: 'Turnstile 验证失败' }, 400);
+    }
+  }
   if (!email || !password || !code) {
     return c.json({ error: 'Missing parameters' }, 400);
   }
@@ -249,6 +303,7 @@ app.get('/api/public/config', async (c) => {
     allowRegister: c.env.ALLOW_REGISTER !== 'false',
     requireApproval: c.env.REQUIRE_APPROVAL === 'true',
     maxDomainsPerUser: parseInt(c.env.MAX_DOMAINS_PER_USER || '1'),
+    turnstileSiteKey: c.env.TURNSTILE_SITE_KEY || null,
   });
 });
 
