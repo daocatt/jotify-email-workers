@@ -44,7 +44,7 @@ export default function App() {
   const [config, setConfig] = useState<any>({ allowRegister: true, requireApproval: true, maxDomainsPerUser: 1 });
 
   // Dashboard state
-  const [activeTab, setActiveTab] = useState<'domains' | 'destinations' | 'forwardRules' | 'webhooks' | 'webhookRules' | 'admin' | 'superadmin'>('domains');
+  const [activeTab, setActiveTab] = useState<'domains' | 'destinations' | 'forwardRules' | 'webhooks' | 'webhookRules' | 'admin' | 'superadmin' | 'help'>('domains');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [newPassword, setNewPassword] = useState('');
@@ -797,6 +797,19 @@ export default function App() {
             </button>
           </div>
 
+          {/* Group 2.5: Help Docs */}
+          <div className="flex flex-col gap-1 border-l-2 border-gray-100 pl-2">
+            <div className="px-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">说明文档</div>
+            <button
+              onClick={() => { setActiveTab('help'); setMobileMenuOpen(false); }}
+              className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'help' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+                }`}
+            >
+              <AlertCircle className="h-4 w-4" />
+              使用帮助 & 文档
+            </button>
+          </div>
+
           {/* Group 3: Admin Actions */}
           {(isAdmin || isSuperadmin) && (
             <div className="flex flex-col gap-1 border-t border-gray-150 pt-3 mt-1">
@@ -828,6 +841,88 @@ export default function App() {
 
         {/* Right Tab Content area */}
         <main className="flex-1 min-w-0 bg-white border border-gray-100 rounded-xl p-6 shadow-xs">
+
+          {/* Help tab */}
+          {activeTab === 'help' && (
+            <div className="space-y-6 text-xs text-gray-700 leading-relaxed">
+              <div>
+                <h3 className="text-base font-bold text-gray-900 font-serif">系统使用帮助与说明文档</h3>
+                <p className="text-xs text-gray-500 mt-1">这里列出了邮件收发限制、附件处理机制以及对外 Webhook 投递的参数细节。</p>
+              </div>
+
+              {/* Card 1: Limits */}
+              <div className="bg-gray-50 border border-gray-150 rounded-xl p-5 space-y-3">
+                <div className="font-bold text-gray-800 text-sm flex items-center gap-1.5">
+                  <AlertCircle className="h-4.5 w-4.5 text-indigo-600" />
+                  收信与转发限制
+                </div>
+                <ul className="list-disc list-inside space-y-1.5 text-gray-600 pl-1">
+                  <li><strong>单封邮件大小限制：</strong> 受 Cloudflare Email Routing 平台限制，接收与转发的最大邮件体积为 <strong>25 MB</strong>。超过该大小的邮件会被 Cloudflare 直接退信。</li>
+                  <li><strong>并发与 CPU 限制：</strong> 免费版 Cloudflare Workers 的 CPU 执行时间上限为 <strong>10ms</strong>。如果解析超大邮件，可能会偶尔超出限制，如需大流量生产使用，建议升级为 Paid Plan。</li>
+                </ul>
+              </div>
+
+              {/* Card 2: Attachments */}
+              <div className="bg-gray-50 border border-gray-150 rounded-xl p-5 space-y-3">
+                <div className="font-bold text-gray-800 text-sm flex items-center gap-1.5">
+                  <Mail className="h-4.5 w-4.5 text-indigo-600" />
+                  附件与格式化处理
+                </div>
+                <ul className="list-disc list-inside space-y-1.5 text-gray-600 pl-1">
+                  <li><strong>邮箱转发方式：</strong> 采用 Cloudflare 内置的 <code>message.forward()</code> 函数进行转发。此过程<strong>完全保留</strong>原始邮件中的所有格式、HTML、图片以及<strong>附件</strong>，且不消耗任何 Workers CPU 时间。</li>
+                  <li><strong>API Webhook 集成方式：</strong> 仅提取解析邮件的文本主体。为防止 Worker 运行内存（128MB）溢出和 Webhook 传输过载，<strong>所有邮件附件会被自动丢弃</strong>。如果需要接收附件，请通过邮箱转发方式将邮件路由至您的专属服务器自行解析。</li>
+                </ul>
+              </div>
+
+              {/* Card 3: Webhook Parameters */}
+              <div className="bg-gray-50 border border-gray-150 rounded-xl p-5 space-y-3">
+                <div className="font-bold text-gray-800 text-sm flex items-center gap-1.5">
+                  <Server className="h-4.5 w-4.5 text-indigo-600" />
+                  Webhook 接口投递参数与数据格式
+                </div>
+                <p className="text-gray-600">当收信规则匹配到 API Webhook 转发时，本系统会向您配置的 Webhook URL 发送 <strong>POST</strong> 请求，内容为 <code>application/json</code> 格式。投递字段列表如下：</p>
+                
+                <div className="border border-gray-200 rounded-xl overflow-hidden mt-2">
+                  <table className="min-w-full divide-y divide-gray-200 text-left">
+                    <thead className="bg-gray-100 font-semibold text-gray-800">
+                      <tr>
+                        <th className="px-4 py-2">参数名称</th>
+                        <th className="px-4 py-2">类型</th>
+                        <th className="px-4 py-2">说明</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-150 bg-white font-mono text-[11px] text-gray-600">
+                      <tr>
+                        <td className="px-4 py-2 text-indigo-600 font-semibold">to</td>
+                        <td className="px-4 py-2 text-gray-500">string</td>
+                        <td className="px-4 py-2 text-gray-700 font-sans">收件人电子邮箱地址（例如：<code>u.test@yourdomain.com</code>）</td>
+                      </tr>
+                      <tr>
+                        <td className="px-4 py-2 text-indigo-600 font-semibold">from</td>
+                        <td className="px-4 py-2 text-gray-500">string</td>
+                        <td className="px-4 py-2 text-gray-700 font-sans">发件人电子邮箱地址</td>
+                      </tr>
+                      <tr>
+                        <td className="px-4 py-2 text-indigo-600 font-semibold">subject</td>
+                        <td className="px-4 py-2 text-gray-500">string</td>
+                        <td className="px-4 py-2 text-gray-700 font-sans">邮件主题。如果邮件没有主题，则为空字符串。</td>
+                      </tr>
+                      <tr>
+                        <td className="px-4 py-2 text-indigo-600 font-semibold">text</td>
+                        <td className="px-4 py-2 text-gray-500">string</td>
+                        <td className="px-4 py-2 text-gray-700 font-sans">邮件纯文本内容。若只包含 HTML，系统会自动过滤剥离 HTML 标签后返回纯文本主体。</td>
+                      </tr>
+                      <tr>
+                        <td className="px-4 py-2 text-indigo-600 font-semibold">rawSize</td>
+                        <td className="px-4 py-2 text-gray-500">number</td>
+                        <td className="px-4 py-2 text-gray-700 font-sans">原始邮件大小（单位：字节 Byte）</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Domains tab */}
           {activeTab === 'domains' && (
