@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ShieldAlert, LogOut, Plus, Trash2, Key, Users, CheckCircle, 
+import {
+  ShieldAlert, LogOut, Plus, Trash2, Key, Users, CheckCircle,
   XCircle, Mail, Globe, Server, Link, AlertCircle, RefreshCw, Send
 } from 'lucide-react';
 
@@ -9,7 +9,7 @@ export default function App() {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'login' | 'register' | 'forgot' | 'dashboard'>('login');
-  
+
   // Auth Form states
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,7 +18,12 @@ export default function App() {
   const [sendCodeLoading, setSendCodeLoading] = useState(false);
   const [authError, setAuthError] = useState('');
   const [authSuccess, setAuthSuccess] = useState('');
-  
+  const [turnstileToken, setTurnstileToken] = useState('');
+
+  useEffect(() => {
+    setTurnstileToken('');
+  }, [view]);
+
   // Config states
   const [config, setConfig] = useState<any>({ allowRegister: true, requireApproval: true, maxDomainsPerUser: 1 });
 
@@ -38,7 +43,7 @@ export default function App() {
   // Input states for creation
   const [newDomain, setNewDomain] = useState('');
   const [newDestination, setNewDestination] = useState('');
-  
+
   const [newRulePattern, setNewRulePattern] = useState('');
   const [newRuleSubdomain, setNewRuleSubdomain] = useState('');
   const [newRuleDomainId, setNewRuleDomainId] = useState('');
@@ -144,11 +149,15 @@ export default function App() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
+    if (config.turnstileSiteKey && !turnstileToken) {
+      setAuthError('请先完成人机验证');
+      return;
+    }
     try {
       const res = await fetch('/api/auth/sign-in/email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, turnstileToken }),
       });
       const data = await res.json() as any;
       if (res.ok) {
@@ -189,11 +198,15 @@ export default function App() {
     e.preventDefault();
     setAuthError('');
     setAuthSuccess('');
+    if (config.turnstileSiteKey && !turnstileToken) {
+      setAuthError('请先完成人机验证');
+      return;
+    }
     try {
       const res = await fetch('/api/public/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, name, code }),
+        body: JSON.stringify({ email, password, name, code, turnstileToken }),
       });
       const data = await res.json() as any;
       if (res.ok) {
@@ -211,11 +224,15 @@ export default function App() {
     e.preventDefault();
     setAuthError('');
     setAuthSuccess('');
+    if (config.turnstileSiteKey && !turnstileToken) {
+      setAuthError('请先完成人机验证');
+      return;
+    }
     try {
       const res = await fetch('/api/public/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, code }),
+        body: JSON.stringify({ email, password, code, turnstileToken }),
       });
       const data = await res.json() as any;
       if (res.ok) {
@@ -520,9 +537,6 @@ export default function App() {
           <h2 className="mt-4 text-3xl font-bold tracking-tight text-gray-900">
             {view === 'login' ? '登录 Jotify Email Worker' : view === 'register' ? '注册新账号' : '重置密码'}
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Jotify 自定义邮件路由与 API 投递控制面板
-          </p>
         </div>
 
         <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
@@ -609,6 +623,29 @@ export default function App() {
                 />
               </div>
 
+              {config.turnstileSiteKey && (
+                <div 
+                  ref={(el) => {
+                    if (el && el.childNodes.length === 0 && (window as any).turnstile) {
+                      try {
+                        (window as any).turnstile.render(el, {
+                          sitekey: config.turnstileSiteKey,
+                          callback: (token: string) => {
+                            setTurnstileToken(token);
+                          },
+                          'expired-callback': () => {
+                            setTurnstileToken('');
+                          }
+                        });
+                      } catch (err) {
+                        // ignore
+                      }
+                    }
+                  }} 
+                  className="my-2 flex justify-center"
+                ></div>
+              )}
+
               <button
                 type="submit"
                 className="w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 cursor-pointer transition-colors shadow-xs"
@@ -649,12 +686,11 @@ export default function App() {
           <div className="flex items-center gap-2">
             <Globe className="h-6 w-6 text-indigo-600" />
             <h1 className="text-lg font-bold text-gray-900 font-serif">Jotify Email Router</h1>
-            <span className="text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-full font-semibold">Worker V2</span>
           </div>
 
           <div className="flex items-center gap-4 text-sm text-gray-700">
             <span className="hidden sm:inline font-medium">{user?.name} ({user?.email})</span>
-            
+
             <button
               onClick={() => setShowPasswordModal(true)}
               className="p-2 text-gray-500 hover:text-indigo-600 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1 cursor-pointer"
@@ -662,7 +698,7 @@ export default function App() {
             >
               <Key className="h-4 w-4" />
             </button>
-            
+
             <button
               onClick={handleLogout}
               className="p-2 text-gray-500 hover:text-red-600 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1 cursor-pointer"
@@ -676,24 +712,22 @@ export default function App() {
 
       {/* Main Content container */}
       <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row gap-8">
-        
+
         {/* Left navigation sidebar */}
         <aside className="w-full md:w-56 shrink-0 flex flex-col gap-1.5">
           <button
             onClick={() => setActiveTab('domains')}
-            className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${
-              activeTab === 'domains' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
-            }`}
+            className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'domains' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+              }`}
           >
             <Globe className="h-4 w-4" />
             收信域名管理
           </button>
-          
+
           <button
             onClick={() => setActiveTab('destinations')}
-            className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${
-              activeTab === 'destinations' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
-            }`}
+            className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'destinations' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+              }`}
           >
             <Mail className="h-4 w-4" />
             转发目标邮箱
@@ -701,9 +735,8 @@ export default function App() {
 
           <button
             onClick={() => setActiveTab('forwardRules')}
-            className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${
-              activeTab === 'forwardRules' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
-            }`}
+            className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'forwardRules' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+              }`}
           >
             <Link className="h-4 w-4" />
             邮箱转发规则
@@ -711,9 +744,8 @@ export default function App() {
 
           <button
             onClick={() => setActiveTab('webhooks')}
-            className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${
-              activeTab === 'webhooks' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
-            }`}
+            className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'webhooks' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+              }`}
           >
             <Server className="h-4 w-4" />
             Webhook 接口
@@ -721,9 +753,8 @@ export default function App() {
 
           <button
             onClick={() => setActiveTab('webhookRules')}
-            className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${
-              activeTab === 'webhookRules' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
-            }`}
+            className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'webhookRules' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+              }`}
           >
             <Link className="h-4 w-4" />
             API 集成规则
@@ -732,9 +763,8 @@ export default function App() {
           {isAdmin && (
             <button
               onClick={() => setActiveTab('admin')}
-              className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${
-                activeTab === 'admin' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
-              }`}
+              className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'admin' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+                }`}
             >
               <Users className="h-4 w-4" />
               审核注册用户
@@ -744,9 +774,8 @@ export default function App() {
           {isSuperadmin && (
             <button
               onClick={() => setActiveTab('superadmin')}
-              className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${
-                activeTab === 'superadmin' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
-              }`}
+              className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'superadmin' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+                }`}
             >
               <Users className="h-4 w-4" />
               管理管理员
@@ -756,7 +785,7 @@ export default function App() {
 
         {/* Right Tab Content area */}
         <main className="flex-1 min-w-0 bg-white border border-gray-100 rounded-xl p-6 shadow-xs">
-          
+
           {/* Domains tab */}
           {activeTab === 'domains' && (
             <div className="space-y-6">
@@ -898,7 +927,7 @@ export default function App() {
 
               <form onSubmit={addForwardRule} className="bg-gray-50/50 border border-gray-150 rounded-xl p-4 space-y-4 text-xs text-gray-700">
                 <div className="font-semibold text-gray-800">新增转发规则</div>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block font-semibold mb-1">用户名匹配正则 (Username Regex)</label>
@@ -1017,7 +1046,7 @@ export default function App() {
 
               <form onSubmit={addWebhook} className="bg-gray-50/50 border border-gray-150 rounded-xl p-4 space-y-4 text-xs text-gray-700">
                 <div className="font-semibold text-gray-800">新增 Webhook 接口</div>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block font-semibold mb-1">接口名称 (Name)</label>
@@ -1127,7 +1156,7 @@ export default function App() {
 
               <form onSubmit={addWebhookRule} className="bg-gray-50/50 border border-gray-150 rounded-xl p-4 space-y-4 text-xs text-gray-700">
                 <div className="font-semibold text-gray-800">新增 API 转发规则</div>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block font-semibold mb-1">用户名匹配正则 (Username Regex)</label>
@@ -1262,13 +1291,12 @@ export default function App() {
                           <td className="px-4 py-3 font-semibold">{u.name}</td>
                           <td className="px-4 py-3 font-mono">{u.email}</td>
                           <td className="px-4 py-3">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                              u.status === 'approved' 
-                                ? 'bg-green-50 border-green-200 text-green-700' 
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${u.status === 'approved'
+                                ? 'bg-green-50 border-green-200 text-green-700'
                                 : u.status === 'rejected'
-                                ? 'bg-red-50 border-red-200 text-red-700'
-                                : 'bg-yellow-50 border-yellow-200 text-yellow-700'
-                            }`}>
+                                  ? 'bg-red-50 border-red-200 text-red-700'
+                                  : 'bg-yellow-50 border-yellow-200 text-yellow-700'
+                              }`}>
                               {u.status}
                             </span>
                           </td>
@@ -1314,7 +1342,7 @@ export default function App() {
 
               <form onSubmit={addAdmin} className="bg-gray-50/50 border border-gray-150 rounded-xl p-4 space-y-4 text-xs text-gray-700">
                 <div className="font-semibold text-gray-800">新增管理员账号 (Create Admin)</div>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <label className="block font-semibold mb-1">姓名</label>

@@ -1,11 +1,10 @@
-# Jotify Email Workers V2
+# Jotify Email Workers
 
-这是一个基于 **Cloudflare Workers** 部署的全栈邮件转发与 API Webhook 投递面板。它作为一个独立的中间件，帮助用户自定义管理域名下的邮件路由规则。
+一个基于 **Cloudflare Workers** + **CloudFlare Email Routing** 部署的邮件转发与 API Webhook 服务。
 
 ## 💡 主要功能
 
-1. **多租户控制面板：**
-   * 管理员/超级管理员审核注册。
+1. **多租户机制：**
    * 用户可自主登录并管理自己的收信规则。
    * 采用 Better Auth 进行安全的身份验证。
 
@@ -13,6 +12,7 @@
    * 支持添加自定义收信域名。
    * 支持通过**正则表达式**匹配收件用户名，并将邮件直接转发到指定的目标邮箱。
    * *示例：* 匹配 `u.*@yourdomain.com` 转发到 `target@gmail.com`。
+   * 延续 CF Email routing 全收服务。
 
 3. **API 接口集成 (Webhook Rules)：**
    * 支持配置多个 Webhook 回调地址（支持 Bearer Token 或自定义 Header 认证）。
@@ -22,9 +22,10 @@
 ## 🛠️ 快速配置与部署
 
 1. **准备环境文件：**
-   将 `.dev.vars.example` 复制为 `.dev.vars`，并修改其中的 `BETTER_AUTH_SECRET`、`RESEND_API_KEY` 和默认管理员凭据（`SUPERADMIN_EMAIL` 与 `SUPERADMIN_PASSWORD`，默认管理员邮箱为 `jotify@zwq.me`）。
+   将 `.dev.vars.example` 复制为 `.dev.vars`，并修改其中的 `BETTER_AUTH_SECRET`、`RESEND_API_KEY` 和默认管理员帐号（`SUPERADMIN_EMAIL` 与 `SUPERADMIN_PASSWORD`，默认管理员邮箱为 `jotify@zwq.me`）。
 
 2. **数据库初始化：**
+
    ```bash
    npx drizzle-kit generate
    npx wrangler d1 migrations apply DB --local
@@ -33,6 +34,7 @@
    ```
 
 3. **编译并部署：**
+
    ```bash
    npm run build
    npm run deploy
