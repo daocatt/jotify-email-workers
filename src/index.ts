@@ -31,7 +31,24 @@ interface Bindings {
 const app = new Hono<{ Bindings: Bindings }>();
 
 app.use('*', cors({
-  origin: (origin) => origin,
+  origin: (origin, c) => {
+    if (!origin) return '*';
+    // Allow local development
+    if (origin === 'http://localhost:5173' || origin === 'http://localhost:8787') {
+      return origin;
+    }
+    // Allow configured production origin
+    const configuredUrl = c.env.BETTER_AUTH_URL?.trim();
+    if (configuredUrl) {
+      try {
+        const parsed = new URL(configuredUrl);
+        if (origin === parsed.origin) {
+          return origin;
+        }
+      } catch {}
+    }
+    return null;
+  },
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization', 'Cookie'],
   exposeHeaders: ['Set-Cookie'],
@@ -192,6 +209,20 @@ app.post('/api/public/send-code', async (c) => {
   if (!email) return c.json({ error: 'Email is required' }, 400);
 
   const db = getDb(c.env.DB);
+  const identifier = `email_code:${type}:${email}`;
+
+  // 60-second cooldown rate limit check
+  const existingCode = await db.select().from(schema.verification)
+    .where(eq(schema.verification.identifier, identifier))
+    .then(r => r[0]);
+
+  if (existingCode && existingCode.createdAt) {
+    const elapsed = Date.now() - new Date(existingCode.createdAt).getTime();
+    if (elapsed < 60 * 1000) {
+      return c.json({ error: '请等待 60 秒后再重新获取验证码' }, 429);
+    }
+  }
+
   const existingUser = await db.select().from(schema.user).where(eq(schema.user.email, email)).then(r => r[0]);
 
   if (type === 'register') {
@@ -215,8 +246,6 @@ app.post('/api/public/send-code', async (c) => {
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-  const identifier = `email_code:${type}:${email}`;
-  
   // Save verification record
   await db.delete(schema.verification).where(eq(schema.verification.identifier, identifier));
   await db.insert(schema.verification).values({
