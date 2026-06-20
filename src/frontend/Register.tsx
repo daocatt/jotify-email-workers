@@ -16,6 +16,7 @@ export default function Register({ config, setView }: RegisterProps) {
   const [authSuccess, setAuthSuccess] = useState('');
   const [turnstileToken, setTurnstileToken] = useState('');
   const [turnstileLoaded, setTurnstileLoaded] = useState(!!(window as any).turnstile);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if ((window as any).turnstile) {
@@ -36,6 +37,7 @@ export default function Register({ config, setView }: RegisterProps) {
       setAuthError('请先输入电子邮箱');
       return;
     }
+    if (sendCodeLoading || isSubmitting) return;
     setAuthError('');
     setAuthSuccess('');
     setSendCodeLoading(true);
@@ -60,12 +62,14 @@ export default function Register({ config, setView }: RegisterProps) {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setAuthError('');
     setAuthSuccess('');
     if (config.turnstileSiteKey && !turnstileToken) {
       setAuthError('请先完成人机验证');
       return;
     }
+    setIsSubmitting(true);
     try {
       const res = await fetch('/api/public/register', {
         method: 'POST',
@@ -81,6 +85,8 @@ export default function Register({ config, setView }: RegisterProps) {
       }
     } catch {
       setAuthError('网络错误，请稍后重试');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -114,9 +120,10 @@ export default function Register({ config, setView }: RegisterProps) {
               <input
                 type="text"
                 required
+                disabled={isSubmitting}
                 value={name}
                 onChange={e => setName(e.target.value)}
-                className="w-full text-sm px-3.5 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full text-sm px-3.5 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50"
                 placeholder="如 Admin"
               />
             </div>
@@ -127,14 +134,15 @@ export default function Register({ config, setView }: RegisterProps) {
                 <input
                   type="email"
                   required
+                  disabled={isSubmitting}
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  className="flex-1 text-sm px-3.5 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="flex-1 text-sm px-3.5 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50"
                   placeholder="name@domain.com"
                 />
                 <button
                   type="button"
-                  disabled={sendCodeLoading}
+                  disabled={sendCodeLoading || isSubmitting}
                   onClick={sendVerificationCode}
                   className="px-3 text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold rounded-lg hover:bg-indigo-100 disabled:opacity-50 flex items-center gap-1 cursor-pointer shrink-0"
                 >
@@ -149,10 +157,11 @@ export default function Register({ config, setView }: RegisterProps) {
               <input
                 type="text"
                 required
+                disabled={isSubmitting}
                 maxLength={6}
                 value={code}
                 onChange={e => setCode(e.target.value)}
-                className="w-full text-sm px-3.5 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-center font-mono tracking-widest"
+                className="w-full text-sm px-3.5 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-center font-mono tracking-widest disabled:opacity-50"
                 placeholder="输入 6 位验证码"
               />
             </div>
@@ -162,9 +171,10 @@ export default function Register({ config, setView }: RegisterProps) {
               <input
                 type="password"
                 required
+                disabled={isSubmitting}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full text-sm px-3.5 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full text-sm px-3.5 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50"
                 placeholder="******"
               />
             </div>
@@ -195,14 +205,15 @@ export default function Register({ config, setView }: RegisterProps) {
 
             <button
               type="submit"
-              className="w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 cursor-pointer transition-colors shadow-xs"
+              disabled={isSubmitting}
+              className="w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 cursor-pointer transition-colors shadow-xs disabled:opacity-50 flex items-center justify-center gap-1.5"
             >
-              注册并提交审核
+              {isSubmitting ? '正在提交...' : '注册并提交审核'}
             </button>
           </form>
 
           <div className="mt-6 flex justify-center text-xs text-indigo-600">
-            <button onClick={() => setView('login')} className="hover:underline cursor-pointer">返回登录</button>
+            <button onClick={() => setView('login')} disabled={isSubmitting} className="hover:underline cursor-pointer disabled:opacity-50">返回登录</button>
           </div>
         </div>
       </div>

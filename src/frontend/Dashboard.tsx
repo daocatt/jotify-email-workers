@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   ShieldAlert, LogOut, Plus, Trash2, Key, Users, CheckCircle,
   XCircle, Mail, Globe, Server, Link, AlertCircle, RefreshCw, Send,
-  Menu, X
+  Menu, X, Edit, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -16,6 +16,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [newPassword, setNewPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   // Data states
   const [domains, setDomains] = useState<any[]>([]);
@@ -25,31 +26,62 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
   const [webhookRules, setWebhookRules] = useState<any[]>([]);
   const [usersList, setUsersList] = useState<any[]>([]);
 
-  // Input states for creation
+  // Input states for Domain / Destination adding (simple inputs)
   const [newDomain, setNewDomain] = useState('');
   const [newDestination, setNewDestination] = useState('');
+  const [isAddingDomain, setIsAddingDomain] = useState(false);
+  const [isAddingDestination, setIsAddingDestination] = useState(false);
 
-  const [newRulePattern, setNewRulePattern] = useState('');
-  const [newRuleSubdomain, setNewRuleSubdomain] = useState('');
-  const [newRuleDomainId, setNewRuleDomainId] = useState('');
-  const [newRuleDestId, setNewRuleDestId] = useState('');
+  // Pagination states (20 per page)
+  const ITEMS_PER_PAGE = 20;
+  const [domainsPage, setDomainsPage] = useState(1);
+  const [destinationsPage, setDestinationsPage] = useState(1);
+  const [forwardRulesPage, setForwardRulesPage] = useState(1);
+  const [webhooksPage, setWebhooksPage] = useState(1);
+  const [webhookRulesPage, setWebhookRulesPage] = useState(1);
+  const [usersListPage, setUsersListPage] = useState(1);
 
-  const [newWebhookName, setNewWebhookName] = useState('');
-  const [newWebhookUrl, setNewWebhookUrl] = useState('');
-  const [newWebhookAuthType, setNewWebhookAuthType] = useState('none');
-  const [newWebhookAuthToken, setNewWebhookAuthToken] = useState('');
+  // ── Modal & Form States for WEBHOOKS ──
+  const [webhookModalOpen, setWebhookModalOpen] = useState(false);
+  const [editingWebhook, setEditingWebhook] = useState<any>(null); // null means adding
+  const [webhookName, setWebhookName] = useState('');
+  const [webhookUrl, setWebhookUrl] = useState('');
+  const [webhookAuthType, setWebhookAuthType] = useState('none');
+  const [webhookAuthToken, setWebhookAuthToken] = useState('');
+  const [webhookSaving, setWebhookSaving] = useState(false);
 
-  const [newWebhookRulePattern, setNewWebhookRulePattern] = useState('');
-  const [newWebhookRuleSubdomain, setNewWebhookRuleSubdomain] = useState('');
-  const [newWebhookRuleDomainId, setNewWebhookRuleDomainId] = useState('');
-  const [newWebhookRuleWebhookId, setNewWebhookRuleWebhookId] = useState('');
+  // ── Modal & Form States for FORWARD RULES ──
+  const [forwardRuleModalOpen, setForwardRuleModalOpen] = useState(false);
+  const [editingForwardRule, setEditingForwardRule] = useState<any>(null); // null means adding
+  const [rulePattern, setRulePattern] = useState('');
+  const [ruleSubdomain, setRuleSubdomain] = useState('');
+  const [ruleDomainId, setRuleDomainId] = useState('');
+  const [ruleDestId, setRuleDestId] = useState('');
+  const [forwardRuleSaving, setForwardRuleSaving] = useState(false);
+
+  // ── Modal & Form States for WEBHOOK RULES ──
+  const [webhookRuleModalOpen, setWebhookRuleModalOpen] = useState(false);
+  const [editingWebhookRule, setEditingWebhookRule] = useState<any>(null); // null means adding
+  const [webhookRulePattern, setWebhookRulePattern] = useState('');
+  const [webhookRuleSubdomain, setWebhookRuleSubdomain] = useState('');
+  const [webhookRuleDomainId, setWebhookRuleDomainId] = useState('');
+  const [webhookRuleWebhookId, setWebhookRuleWebhookId] = useState('');
+  const [webhookRuleSaving, setWebhookRuleSaving] = useState(false);
 
   // Admin/Superadmin input states
   const [newAdminName, setNewAdminName] = useState('');
   const [newAdminEmail, setNewAdminEmail] = useState('');
   const [newAdminPassword, setNewAdminPassword] = useState('');
+  const [adminSaving, setAdminSaving] = useState(false);
 
+  // Reset pagination on tab change
   useEffect(() => {
+    setDomainsPage(1);
+    setDestinationsPage(1);
+    setForwardRulesPage(1);
+    setWebhooksPage(1);
+    setWebhookRulesPage(1);
+    setUsersListPage(1);
     fetchDashboardData();
   }, [activeTab]);
 
@@ -93,6 +125,8 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isChangingPassword) return;
+    setIsChangingPassword(true);
     try {
       const res = await fetch('/api/user/change-password', {
         method: 'POST',
@@ -109,12 +143,15 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
       }
     } catch {
       alert('网络错误');
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
   const addDomain = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newDomain.trim()) return;
+    if (!newDomain.trim() || isAddingDomain) return;
+    setIsAddingDomain(true);
     try {
       const res = await fetch('/api/domains', {
         method: 'POST',
@@ -130,6 +167,8 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
       }
     } catch {
       alert('网络错误');
+    } finally {
+      setIsAddingDomain(false);
     }
   };
 
@@ -145,7 +184,8 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
 
   const addDestination = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newDestination.trim()) return;
+    if (!newDestination.trim() || isAddingDestination) return;
+    setIsAddingDestination(true);
     try {
       const res = await fetch('/api/destinations', {
         method: 'POST',
@@ -161,6 +201,8 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
       }
     } catch {
       alert('网络错误');
+    } finally {
+      setIsAddingDestination(false);
     }
   };
 
@@ -174,71 +216,51 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
     }
   };
 
-  const addForwardRule = async (e: React.FormEvent) => {
+  // ── WEBHOOKS Modal Actions ──
+  const openWebhookModal = (webhook: any = null) => {
+    setEditingWebhook(webhook);
+    if (webhook) {
+      setWebhookName(webhook.name);
+      setWebhookUrl(webhook.url);
+      setWebhookAuthType(webhook.authType || 'none');
+      setWebhookAuthToken(webhook.authToken || '');
+    } else {
+      setWebhookName('');
+      setWebhookUrl('');
+      setWebhookAuthType('none');
+      setWebhookAuthToken('');
+    }
+    setWebhookModalOpen(true);
+  };
+
+  const saveWebhook = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newRulePattern || !newRuleDomainId || !newRuleDestId) return;
+    if (!webhookName || !webhookUrl || webhookSaving) return;
+    setWebhookSaving(true);
     try {
-      const res = await fetch('/api/forward-rules', {
-        method: 'POST',
+      const method = editingWebhook ? 'PUT' : 'POST';
+      const endpoint = editingWebhook ? `/api/webhooks/${editingWebhook.id}` : '/api/webhooks';
+      const res = await fetch(endpoint, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          usernamePattern: newRulePattern,
-          subdomain: newRuleSubdomain || null,
-          domainId: parseInt(newRuleDomainId),
-          destinationId: parseInt(newRuleDestId),
+          name: webhookName,
+          url: webhookUrl,
+          authType: webhookAuthType,
+          authToken: webhookAuthToken || null,
         }),
       });
       if (res.ok) {
-        setNewRulePattern('');
-        setNewRuleSubdomain('');
-        setNewRuleDomainId('');
-        setNewRuleDestId('');
+        setWebhookModalOpen(false);
         fetchDashboardData();
       } else {
         const data = await res.json() as any;
-        alert(`添加失败: ${data.error}`);
+        alert(`保存失败: ${data.error}`);
       }
     } catch {
       alert('网络错误');
-    }
-  };
-
-  const deleteForwardRule = async (id: number) => {
-    if (!confirm('确定删除此转发规则吗？')) return;
-    try {
-      const res = await fetch(`/api/forward-rules/${id}`, { method: 'DELETE' });
-      if (res.ok) fetchDashboardData();
-    } catch {
-      alert('网络错误');
-    }
-  };
-
-  const addWebhook = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newWebhookName || !newWebhookUrl) return;
-    try {
-      const res = await fetch('/api/webhooks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: newWebhookName,
-          url: newWebhookUrl,
-          authType: newWebhookAuthType,
-          authToken: newWebhookAuthToken || null,
-        }),
-      });
-      if (res.ok) {
-        setNewWebhookName('');
-        setNewWebhookUrl('');
-        setNewWebhookAuthType('none');
-        setNewWebhookAuthToken('');
-        fetchDashboardData();
-      } else {
-        const data = await res.json() as any;
-        alert(`添加失败: ${data.error}`);
-      }
-    } catch {
-      alert('网络错误');
+    } finally {
+      setWebhookSaving(false);
     }
   };
 
@@ -252,32 +274,109 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
     }
   };
 
-  const addWebhookRule = async (e: React.FormEvent) => {
+  // ── FORWARDING RULES Modal Actions ──
+  const openForwardRuleModal = (rule: any = null) => {
+    setEditingForwardRule(rule);
+    if (rule) {
+      setRulePattern(rule.usernamePattern);
+      setRuleSubdomain(rule.subdomain || '');
+      setRuleDomainId(rule.domainId.toString());
+      setRuleDestId(rule.destinationId.toString());
+    } else {
+      setRulePattern('');
+      setRuleSubdomain('');
+      setRuleDomainId(domains[0]?.id?.toString() || '');
+      setRuleDestId(destinations[0]?.id?.toString() || '');
+    }
+    setForwardRuleModalOpen(true);
+  };
+
+  const saveForwardRule = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newWebhookRulePattern || !newWebhookRuleDomainId || !newWebhookRuleWebhookId) return;
+    if (!rulePattern || !ruleDomainId || !ruleDestId || forwardRuleSaving) return;
+    setForwardRuleSaving(true);
     try {
-      const res = await fetch('/api/webhook-rules', {
-        method: 'POST',
+      const method = editingForwardRule ? 'PUT' : 'POST';
+      const endpoint = editingForwardRule ? `/api/forward-rules/${editingForwardRule.id}` : '/api/forward-rules';
+      const res = await fetch(endpoint, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          usernamePattern: newWebhookRulePattern,
-          subdomain: newWebhookRuleSubdomain || null,
-          domainId: parseInt(newWebhookRuleDomainId),
-          webhookId: parseInt(newWebhookRuleWebhookId),
+          usernamePattern: rulePattern,
+          subdomain: ruleSubdomain || null,
+          domainId: parseInt(ruleDomainId),
+          destinationId: parseInt(ruleDestId),
         }),
       });
       if (res.ok) {
-        setNewWebhookRulePattern('');
-        setNewWebhookRuleSubdomain('');
-        setNewWebhookRuleDomainId('');
-        setNewWebhookRuleWebhookId('');
+        setForwardRuleModalOpen(false);
         fetchDashboardData();
       } else {
         const data = await res.json() as any;
-        alert(`添加失败: ${data.error}`);
+        alert(`保存失败: ${data.error}`);
       }
     } catch {
       alert('网络错误');
+    } finally {
+      setForwardRuleSaving(false);
+    }
+  };
+
+  const deleteForwardRule = async (id: number) => {
+    if (!confirm('确定删除此转发规则吗？')) return;
+    try {
+      const res = await fetch(`/api/forward-rules/${id}`, { method: 'DELETE' });
+      if (res.ok) fetchDashboardData();
+    } catch {
+      alert('网络错误');
+    }
+  };
+
+  // ── WEBHOOK RULES Modal Actions ──
+  const openWebhookRuleModal = (rule: any = null) => {
+    setEditingWebhookRule(rule);
+    if (rule) {
+      setWebhookRulePattern(rule.usernamePattern);
+      setWebhookRuleSubdomain(rule.subdomain || '');
+      setWebhookRuleDomainId(rule.domainId.toString());
+      setWebhookRuleWebhookId(rule.webhookId.toString());
+    } else {
+      setWebhookRulePattern('');
+      setWebhookRuleSubdomain('');
+      setWebhookRuleDomainId(domains[0]?.id?.toString() || '');
+      setWebhookRuleWebhookId(webhooks[0]?.id?.toString() || '');
+    }
+    setWebhookRuleModalOpen(true);
+  };
+
+  const saveWebhookRule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!webhookRulePattern || !webhookRuleDomainId || !webhookRuleWebhookId || webhookRuleSaving) return;
+    setWebhookRuleSaving(true);
+    try {
+      const method = editingWebhookRule ? 'PUT' : 'POST';
+      const endpoint = editingWebhookRule ? `/api/webhook-rules/${editingWebhookRule.id}` : '/api/webhook-rules';
+      const res = await fetch(endpoint, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          usernamePattern: webhookRulePattern,
+          subdomain: webhookRuleSubdomain || null,
+          domainId: parseInt(webhookRuleDomainId),
+          webhookId: parseInt(webhookRuleWebhookId),
+        }),
+      });
+      if (res.ok) {
+        setWebhookRuleModalOpen(false);
+        fetchDashboardData();
+      } else {
+        const data = await res.json() as any;
+        alert(`保存失败: ${data.error}`);
+      }
+    } catch {
+      alert('网络错误');
+    } finally {
+      setWebhookRuleSaving(false);
     }
   };
 
@@ -311,7 +410,8 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
 
   const addAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newAdminEmail || !newAdminPassword || !newAdminName) return;
+    if (!newAdminEmail || !newAdminPassword || !newAdminName || adminSaving) return;
+    setAdminSaving(true);
     try {
       const res = await fetch('/api/admin/add-admin', {
         method: 'POST',
@@ -334,6 +434,8 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
       }
     } catch {
       alert('网络错误');
+    } finally {
+      setAdminSaving(false);
     }
   };
 
@@ -345,6 +447,99 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
     } catch {
       alert('网络错误');
     }
+  };
+
+  const obscureToken = (authType: string, token: string | null) => {
+    if (!token) return '无 (None)';
+    if (authType === 'bearer') {
+      const cleanToken = token.replace(/^bearer\s+/i, '');
+      if (cleanToken.length <= 6) return 'Bearer ***';
+      return `Bearer ${cleanToken.slice(0, 3)}***${cleanToken.slice(-3)}`;
+    }
+    if (authType === 'header') {
+      const parts = token.split(':');
+      if (parts.length === 2) {
+        const key = parts[0].trim();
+        const value = parts[1].trim();
+        if (value.length <= 6) return `${key}: ***`;
+        return `${key}: ${value.slice(0, 3)}***${value.slice(-3)}`;
+      }
+      if (token.length <= 6) return '***';
+      return `${token.slice(0, 3)}***${token.slice(-3)}`;
+    }
+    return '无 (None)';
+  };
+
+  // ── Pagination Helper Component ──
+  const PaginationControls = ({
+    currentPage,
+    totalItems,
+    onPageChange
+  }: {
+    currentPage: number;
+    totalItems: number;
+    onPageChange: (page: number) => void;
+  }) => {
+    const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
+    if (totalPages <= 1) return null;
+
+    return (
+      <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3 sm:px-6 mt-4">
+        <div className="flex flex-1 justify-between sm:hidden">
+          <button
+            disabled={currentPage === 1}
+            onClick={() => onPageChange(currentPage - 1)}
+            className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
+          >
+            上一页
+          </button>
+          <button
+            disabled={currentPage === totalPages}
+            onClick={() => onPageChange(currentPage + 1)}
+            className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
+          >
+            下一页
+          </button>
+        </div>
+        <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs text-gray-500">
+              显示第 <span className="font-medium">{(currentPage - 1) * ITEMS_PER_PAGE + 1}</span> 到第{' '}
+              <span className="font-medium">
+                {Math.min(currentPage * ITEMS_PER_PAGE, totalItems)}
+              </span>{' '}
+              条，共 <span className="font-medium">{totalItems}</span> 条数据
+            </p>
+          </div>
+          <div>
+            <nav className="isolate inline-flex -space-x-px rounded-md shadow-xs" aria-label="Pagination">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => onPageChange(currentPage - 1)}
+                className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 cursor-pointer"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="relative inline-flex items-center px-4 py-2 text-xs font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 focus:outline-offset-0 select-none">
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => onPageChange(currentPage + 1)}
+                className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 cursor-pointer"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </nav>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const getPaginatedItems = (items: any[], currentPage: number) => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return items.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   };
 
   const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
@@ -519,7 +714,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                   <Server className="h-4.5 w-4.5 text-indigo-600" />
                   Webhook 接口投递参数与数据格式
                 </div>
-                <p className="text-gray-600">当收信规则匹配到 API Webhook 转发时，本系统会向您配置 of Webhook URL 发送 <strong>POST</strong> 请求，内容为 <code>application/json</code> 格式。投递字段列表如下：</p>
+                <p className="text-gray-600">当收信规则匹配到 API Webhook 转发时，本系统会向您配置的 Webhook URL 发送 <strong>POST</strong> 请求，内容为 <code>application/json</code> 格式。投递字段列表如下：</p>
                 
                 <div className="border border-gray-200 rounded-xl overflow-hidden mt-2">
                   <table className="min-w-full divide-y divide-gray-200 text-left">
@@ -589,17 +784,19 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                 <input
                   type="text"
                   required
+                  disabled={isAddingDomain}
                   value={newDomain}
                   onChange={e => setNewDomain(e.target.value)}
-                  className="flex-1 text-xs px-3.5 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                  className="flex-1 text-xs px-3.5 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
                   placeholder="e.g. zwq.me"
                 />
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 flex items-center gap-1 cursor-pointer shrink-0 transition-colors"
+                  disabled={isAddingDomain}
+                  className="px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 flex items-center gap-1 cursor-pointer shrink-0 transition-colors disabled:opacity-50"
                 >
                   <Plus className="h-4 w-4" />
-                  添加域名
+                  {isAddingDomain ? '添加中...' : '添加域名'}
                 </button>
               </form>
 
@@ -614,7 +811,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-gray-700">
                     {domains.length > 0 ? (
-                      domains.map(d => (
+                      getPaginatedItems(domains, domainsPage).map(d => (
                         <tr key={d.id} className="hover:bg-gray-50/50">
                           <td className="px-4 py-3 font-mono font-semibold">{d.domain}</td>
                           <td className="px-4 py-3">{new Date(d.createdAt).toLocaleString()}</td>
@@ -635,6 +832,11 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                     )}
                   </tbody>
                 </table>
+                <PaginationControls
+                  currentPage={domainsPage}
+                  totalItems={domains.length}
+                  onPageChange={setDomainsPage}
+                />
               </div>
             </div>
           )}
@@ -651,17 +853,19 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                 <input
                   type="email"
                   required
+                  disabled={isAddingDestination}
                   value={newDestination}
                   onChange={e => setNewDestination(e.target.value)}
-                  className="flex-1 text-xs px-3.5 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                  className="flex-1 text-xs px-3.5 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
                   placeholder="e.g. my-private-email@gmail.com"
                 />
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 flex items-center gap-1 cursor-pointer shrink-0 transition-colors"
+                  disabled={isAddingDestination}
+                  className="px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 flex items-center gap-1 cursor-pointer shrink-0 transition-colors disabled:opacity-50"
                 >
                   <Plus className="h-4 w-4" />
-                  添加目标
+                  {isAddingDestination ? '添加中...' : '添加目标'}
                 </button>
               </form>
 
@@ -676,7 +880,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-gray-700">
                     {destinations.length > 0 ? (
-                      destinations.map(d => (
+                      getPaginatedItems(destinations, destinationsPage).map(d => (
                         <tr key={d.id} className="hover:bg-gray-50/50">
                           <td className="px-4 py-3 font-mono font-semibold">{d.email}</td>
                           <td className="px-4 py-3">{new Date(d.createdAt).toLocaleString()}</td>
@@ -697,6 +901,11 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                     )}
                   </tbody>
                 </table>
+                <PaginationControls
+                  currentPage={destinationsPage}
+                  totalItems={destinations.length}
+                  onPageChange={setDestinationsPage}
+                />
               </div>
             </div>
           )}
@@ -704,78 +913,19 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
           {/* Forwarding Rules tab */}
           {activeTab === 'forwardRules' && (
             <div className="space-y-6">
-              <div>
-                <h3 className="text-base font-bold text-gray-900 font-serif">邮箱转发规则 (Email Forwarding Rules)</h3>
-                <p className="text-xs text-gray-500 mt-1">设置具体邮箱地址或正则规则，匹配成功的收信将转发至您绑定的目标邮箱。</p>
-              </div>
-
-              <form onSubmit={addForwardRule} className="bg-gray-50/50 border border-gray-150 rounded-xl p-4 space-y-4 text-xs text-gray-700">
-                <div className="font-semibold text-gray-800">新增转发规则</div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block font-semibold mb-1">用户名匹配正则 (Username Regex)</label>
-                    <input
-                      type="text"
-                      required
-                      value={newRulePattern}
-                      onChange={e => setNewRulePattern(e.target.value)}
-                      className="w-full text-xs px-3 py-1.5 bg-white border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
-                      placeholder="e.g. u.* (u开头任意字符) 或 info"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold mb-1">子域名 (Subdomain - 可选)</label>
-                    <input
-                      type="text"
-                      value={newRuleSubdomain}
-                      onChange={e => setNewRuleSubdomain(e.target.value)}
-                      className="w-full text-xs px-3 py-1.5 bg-white border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
-                      placeholder="e.g. mail"
-                    />
-                  </div>
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 font-serif">邮箱转发规则 (Email Forwarding Rules)</h3>
+                  <p className="text-xs text-gray-500 mt-1">设置具体邮箱地址或正则规则，匹配成功的收信将转发至您绑定的目标邮箱。</p>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block font-semibold mb-1">匹配收信域名 (Domain)</label>
-                    <select
-                      required
-                      value={newRuleDomainId}
-                      onChange={e => setNewRuleDomainId(e.target.value)}
-                      className="w-full text-xs px-3 py-1.5 bg-white border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 font-mono"
-                    >
-                      <option value="">-- 选择域名 --</option>
-                      {domains.map(d => (
-                        <option key={d.id} value={d.id}>{d.domain}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold mb-1">转发到目标邮箱 (Destination)</label>
-                    <select
-                      required
-                      value={newRuleDestId}
-                      onChange={e => setNewRuleDestId(e.target.value)}
-                      className="w-full text-xs px-3 py-1.5 bg-white border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 font-mono"
-                    >
-                      <option value="">-- 选择转发目标 --</option>
-                      {destinations.map(dest => (
-                        <option key={dest.id} value={dest.id}>{dest.email}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
                 <button
-                  type="submit"
-                  className="px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors cursor-pointer"
+                  onClick={() => openForwardRuleModal(null)}
+                  className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1 cursor-pointer transition-colors shadow-xs"
                 >
-                  添加规则
+                  <Plus className="h-4 w-4" />
+                  新建转发规则
                 </button>
-              </form>
+              </div>
 
               <div className="border border-gray-100 rounded-xl overflow-hidden">
                 <table className="min-w-full divide-y divide-gray-100 text-xs">
@@ -789,7 +939,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-gray-700">
                     {forwardRules.length > 0 ? (
-                      forwardRules.map(r => {
+                      getPaginatedItems(forwardRules, forwardRulesPage).map(r => {
                         const d = domains.find(x => x.id === r.domainId);
                         const dest = destinations.find(x => x.id === r.destinationId);
                         const displayDomain = r.subdomain ? `${r.subdomain}.${d?.domain || ''}` : (d?.domain || '');
@@ -798,10 +948,18 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                             <td className="px-4 py-3 font-mono font-semibold text-indigo-700">^{r.usernamePattern}$</td>
                             <td className="px-4 py-3 font-mono text-gray-500">@{displayDomain}</td>
                             <td className="px-4 py-3 font-mono font-medium">{dest?.email}</td>
-                            <td className="px-4 py-3 text-right">
+                            <td className="px-4 py-3 text-right space-x-2">
+                              <button
+                                onClick={() => openForwardRuleModal(r)}
+                                className="text-gray-500 hover:text-indigo-600 cursor-pointer"
+                                title="编辑"
+                              >
+                                <Edit className="h-4 w-4 inline" />
+                              </button>
                               <button
                                 onClick={() => deleteForwardRule(r.id)}
                                 className="text-red-500 hover:text-red-700 cursor-pointer"
+                                title="删除"
                               >
                                 <Trash2 className="h-4 w-4 inline" />
                               </button>
@@ -816,6 +974,11 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                     )}
                   </tbody>
                 </table>
+                <PaginationControls
+                  currentPage={forwardRulesPage}
+                  totalItems={forwardRules.length}
+                  onPageChange={setForwardRulesPage}
+                />
               </div>
             </div>
           )}
@@ -823,74 +986,19 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
           {/* Webhooks tab */}
           {activeTab === 'webhooks' && (
             <div className="space-y-6">
-              <div>
-                <h3 className="text-base font-bold text-gray-900 font-serif">API Webhook 接口</h3>
-                <p className="text-xs text-gray-500 mt-1">配置您可以将邮件转发去的一个或多个外部 Webhook 接口。</p>
-              </div>
-
-              <form onSubmit={addWebhook} className="bg-gray-50/50 border border-gray-150 rounded-xl p-4 space-y-4 text-xs text-gray-700">
-                <div className="font-semibold text-gray-800">新增 Webhook 接口</div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block font-semibold mb-1">接口名称 (Name)</label>
-                    <input
-                      type="text"
-                      required
-                      value={newWebhookName}
-                      onChange={e => setNewWebhookName(e.target.value)}
-                      className="w-full text-xs px-3 py-1.5 bg-white border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
-                      placeholder="e.g. 我的飞书机器人"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold mb-1">接口地址 (Webhook URL)</label>
-                    <input
-                      type="url"
-                      required
-                      value={newWebhookUrl}
-                      onChange={e => setNewWebhookUrl(e.target.value)}
-                      className="w-full text-xs px-3 py-1.5 bg-white border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
-                      placeholder="https://..."
-                    />
-                  </div>
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 font-serif">API Webhook 接口</h3>
+                  <p className="text-xs text-gray-500 mt-1">配置您可以将邮件转发去的一个或多个外部 Webhook 接口。</p>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block font-semibold mb-1">鉴权方式 (Auth Type)</label>
-                    <select
-                      value={newWebhookAuthType}
-                      onChange={e => setNewWebhookAuthType(e.target.value)}
-                      className="w-full text-xs px-3 py-1.5 bg-white border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
-                    >
-                      <option value="none">无 (None)</option>
-                      <option value="bearer">Bearer Token</option>
-                      <option value="header">自定义 Header 格式 (Key:Value)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold mb-1">密钥 Token / Header 内容</label>
-                    <input
-                      type="text"
-                      value={newWebhookAuthToken}
-                      onChange={e => setNewWebhookAuthToken(e.target.value)}
-                      disabled={newWebhookAuthType === 'none'}
-                      className="w-full text-xs px-3 py-1.5 bg-white border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
-                      placeholder={newWebhookAuthType === 'header' ? 'X-Secret: my_secret_value' : 'Enter secret token'}
-                    />
-                  </div>
-                </div>
-
                 <button
-                  type="submit"
-                  className="px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors cursor-pointer"
+                  onClick={() => openWebhookModal(null)}
+                  className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1 cursor-pointer transition-colors shadow-xs"
                 >
-                  添加 Webhook
+                  <Plus className="h-4 w-4" />
+                  新建 Webhook
                 </button>
-              </form>
+              </div>
 
               <div className="border border-gray-100 rounded-xl overflow-hidden">
                 <table className="min-w-full divide-y divide-gray-100 text-xs">
@@ -898,21 +1006,32 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                     <tr>
                       <th className="px-4 py-3 text-left">接口名称</th>
                       <th className="px-4 py-3 text-left">接口 URL</th>
-                      <th className="px-4 py-3 text-left">鉴权</th>
+                      <th className="px-4 py-3 text-left">鉴权认证方式 / 密钥</th>
                       <th className="px-4 py-3 text-right">操作</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-gray-700">
                     {webhooks.length > 0 ? (
-                      webhooks.map(w => (
+                      getPaginatedItems(webhooks, webhooksPage).map(w => (
                         <tr key={w.id} className="hover:bg-gray-50/50">
                           <td className="px-4 py-3 font-semibold text-gray-800">{w.name}</td>
                           <td className="px-4 py-3 font-mono text-gray-500 truncate max-w-xs" title={w.url}>{w.url}</td>
-                          <td className="px-4 py-3 font-mono">{w.authType}</td>
-                          <td className="px-4 py-3 text-right">
+                          <td className="px-4 py-3 font-mono">
+                            <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded mr-1.5 text-[10px] font-semibold">{w.authType}</span>
+                            <span className="text-gray-400">{obscureToken(w.authType, w.authToken)}</span>
+                          </td>
+                          <td className="px-4 py-3 text-right space-x-2">
+                            <button
+                              onClick={() => openWebhookModal(w)}
+                              className="text-gray-500 hover:text-indigo-600 cursor-pointer"
+                              title="编辑"
+                            >
+                              <Edit className="h-4 w-4 inline" />
+                            </button>
                             <button
                               onClick={() => deleteWebhook(w.id)}
                               className="text-red-500 hover:text-red-700 cursor-pointer"
+                              title="删除"
                             >
                               <Trash2 className="h-4 w-4 inline" />
                             </button>
@@ -926,6 +1045,11 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                     )}
                   </tbody>
                 </table>
+                <PaginationControls
+                  currentPage={webhooksPage}
+                  totalItems={webhooks.length}
+                  onPageChange={setWebhooksPage}
+                />
               </div>
             </div>
           )}
@@ -933,78 +1057,19 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
           {/* Webhook Rules tab */}
           {activeTab === 'webhookRules' && (
             <div className="space-y-6">
-              <div>
-                <h3 className="text-base font-bold text-gray-900 font-serif">API 集成规则 (API Webhook Rules)</h3>
-                <p className="text-xs text-gray-500 mt-1">设置接收邮箱规则匹配，当匹配成功的收信将触发 API Webhook 发送给对应接口地址。</p>
-              </div>
-
-              <form onSubmit={addWebhookRule} className="bg-gray-50/50 border border-gray-150 rounded-xl p-4 space-y-4 text-xs text-gray-700">
-                <div className="font-semibold text-gray-800">新增 API 转发规则</div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block font-semibold mb-1">用户名匹配正则 (Username Regex)</label>
-                    <input
-                      type="text"
-                      required
-                      value={newWebhookRulePattern}
-                      onChange={e => setNewWebhookRulePattern(e.target.value)}
-                      className="w-full text-xs px-3 py-1.5 bg-white border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
-                      placeholder="e.g. jot_* (jot_开头的任意字符)"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold mb-1">子域名 (Subdomain - 可选)</label>
-                    <input
-                      type="text"
-                      value={newWebhookRuleSubdomain}
-                      onChange={e => setNewWebhookRuleSubdomain(e.target.value)}
-                      className="w-full text-xs px-3 py-1.5 bg-white border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
-                      placeholder="e.g. mail"
-                    />
-                  </div>
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 font-serif">API 集成规则 (API Webhook Rules)</h3>
+                  <p className="text-xs text-gray-500 mt-1">设置接收邮箱规则匹配，当匹配成功的收信将触发 API Webhook 发送给对应接口地址。</p>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block font-semibold mb-1">匹配收信域名 (Domain)</label>
-                    <select
-                      required
-                      value={newWebhookRuleDomainId}
-                      onChange={e => setNewWebhookRuleDomainId(e.target.value)}
-                      className="w-full text-xs px-3 py-1.5 bg-white border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 font-mono"
-                    >
-                      <option value="">-- 选择域名 --</option>
-                      {domains.map(d => (
-                        <option key={d.id} value={d.id}>{d.domain}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold mb-1">转发触发 Webhook (Webhook)</label>
-                    <select
-                      required
-                      value={newWebhookRuleWebhookId}
-                      onChange={e => setNewWebhookRuleWebhookId(e.target.value)}
-                      className="w-full text-xs px-3 py-1.5 bg-white border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 font-mono"
-                    >
-                      <option value="">-- 选择 Webhook 接口 --</option>
-                      {webhooks.map(w => (
-                        <option key={w.id} value={w.id}>{w.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
                 <button
-                  type="submit"
-                  className="px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors cursor-pointer"
+                  onClick={() => openWebhookRuleModal(null)}
+                  className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1 cursor-pointer transition-colors shadow-xs"
                 >
-                  添加 API 规则
+                  <Plus className="h-4 w-4" />
+                  新建 API 规则
                 </button>
-              </form>
+              </div>
 
               <div className="border border-gray-100 rounded-xl overflow-hidden">
                 <table className="min-w-full divide-y divide-gray-100 text-xs">
@@ -1018,7 +1083,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-gray-700">
                     {webhookRules.length > 0 ? (
-                      webhookRules.map(r => {
+                      getPaginatedItems(webhookRules, webhookRulesPage).map(r => {
                         const d = domains.find(x => x.id === r.domainId);
                         const w = webhooks.find(x => x.id === r.webhookId);
                         const displayDomain = r.subdomain ? `${r.subdomain}.${d?.domain || ''}` : (d?.domain || '');
@@ -1027,10 +1092,18 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                             <td className="px-4 py-3 font-mono font-semibold text-indigo-700">^{r.usernamePattern}$</td>
                             <td className="px-4 py-3 font-mono text-gray-500">@{displayDomain}</td>
                             <td className="px-4 py-3 font-semibold text-gray-800">{w?.name}</td>
-                            <td className="px-4 py-3 text-right">
+                            <td className="px-4 py-3 text-right space-x-2">
+                              <button
+                                onClick={() => openWebhookRuleModal(r)}
+                                className="text-gray-500 hover:text-indigo-600 cursor-pointer"
+                                title="编辑"
+                              >
+                                <Edit className="h-4 w-4 inline" />
+                              </button>
                               <button
                                 onClick={() => deleteWebhookRule(r.id)}
                                 className="text-red-500 hover:text-red-700 cursor-pointer"
+                                title="删除"
                               >
                                 <Trash2 className="h-4 w-4 inline" />
                               </button>
@@ -1045,6 +1118,11 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                     )}
                   </tbody>
                 </table>
+                <PaginationControls
+                  currentPage={webhookRulesPage}
+                  totalItems={webhookRules.length}
+                  onPageChange={setWebhookRulesPage}
+                />
               </div>
             </div>
           )}
@@ -1070,7 +1148,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-gray-700">
                     {usersList.length > 0 ? (
-                      usersList.map(u => (
+                      getPaginatedItems(usersList, usersListPage).map(u => (
                         <tr key={u.id} className="hover:bg-gray-50/50">
                           <td className="px-4 py-3 font-semibold">{u.name}</td>
                           <td className="px-4 py-3 font-mono">{u.email}</td>
@@ -1112,6 +1190,11 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                     )}
                   </tbody>
                 </table>
+                <PaginationControls
+                  currentPage={usersListPage}
+                  totalItems={usersList.length}
+                  onPageChange={setUsersListPage}
+                />
               </div>
             </div>
           )}
@@ -1133,9 +1216,10 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                     <input
                       type="text"
                       required
+                      disabled={adminSaving}
                       value={newAdminName}
                       onChange={e => setNewAdminName(e.target.value)}
-                      className="w-full text-xs px-3 py-1.5 bg-white border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                      className="w-full text-xs px-3 py-1.5 bg-white border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
                       placeholder="e.g. Sub Admin"
                     />
                   </div>
@@ -1145,9 +1229,10 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                     <input
                       type="email"
                       required
+                      disabled={adminSaving}
                       value={newAdminEmail}
                       onChange={e => setNewAdminEmail(e.target.value)}
-                      className="w-full text-xs px-3 py-1.5 bg-white border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                      className="w-full text-xs px-3 py-1.5 bg-white border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
                       placeholder="name@domain.com"
                     />
                   </div>
@@ -1157,9 +1242,10 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                     <input
                       type="password"
                       required
+                      disabled={adminSaving}
                       value={newAdminPassword}
                       onChange={e => setNewAdminPassword(e.target.value)}
-                      className="w-full text-xs px-3 py-1.5 bg-white border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                      className="w-full text-xs px-3 py-1.5 bg-white border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
                       placeholder="******"
                     />
                   </div>
@@ -1167,9 +1253,10 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
 
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors cursor-pointer"
+                  disabled={adminSaving}
+                  className="px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  创建管理员
+                  {adminSaving ? '正在创建...' : '创建管理员'}
                 </button>
               </form>
 
@@ -1186,7 +1273,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-gray-700">
                     {usersList.length > 0 ? (
-                      usersList.map(u => (
+                      getPaginatedItems(usersList, usersListPage).map(u => (
                         <tr key={u.id} className="hover:bg-gray-50/50">
                           <td className="px-4 py-3 font-semibold">{u.name}</td>
                           <td className="px-4 py-3 font-mono">{u.email}</td>
@@ -1211,6 +1298,11 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                     )}
                   </tbody>
                 </table>
+                <PaginationControls
+                  currentPage={usersListPage}
+                  totalItems={usersList.length}
+                  onPageChange={setUsersListPage}
+                />
               </div>
             </div>
           )}
@@ -1218,9 +1310,305 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
         </main>
       </div>
 
+      {/* ── WEBHOOK ADD/EDIT MODAL ── */}
+      {webhookModalOpen && (
+        <div className="fixed inset-0 z-50 bg-gray-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-gray-100 shadow-xl rounded-xl p-6 max-w-md w-full space-y-4">
+            <div className="flex justify-between items-center">
+              <h4 className="text-sm font-bold text-gray-900 font-serif flex items-center gap-1.5">
+                <Server className="h-4.5 w-4.5 text-indigo-600" />
+                {editingWebhook ? '修改 Webhook 接口' : '新增 Webhook 接口'}
+              </h4>
+              <button
+                disabled={webhookSaving}
+                onClick={() => setWebhookModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 disabled:opacity-50 cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <form onSubmit={saveWebhook} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">接口名称 (Name)</label>
+                <input
+                  type="text"
+                  required
+                  disabled={webhookSaving}
+                  value={webhookName}
+                  onChange={e => setWebhookName(e.target.value)}
+                  className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                  placeholder="e.g. 我的飞书机器人"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">接口地址 (Webhook URL)</label>
+                <input
+                  type="url"
+                  required
+                  disabled={webhookSaving}
+                  value={webhookUrl}
+                  onChange={e => setWebhookUrl(e.target.value)}
+                  className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                  placeholder="https://..."
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">鉴权方式 (Auth Type)</label>
+                  <select
+                    value={webhookAuthType}
+                    disabled={webhookSaving}
+                    onChange={e => setWebhookAuthType(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                  >
+                    <option value="none">无 (None)</option>
+                    <option value="bearer">Bearer Token</option>
+                    <option value="header">自定义 Header (Key:Value)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">密钥 Token / Header 内容</label>
+                  <input
+                    type="text"
+                    value={webhookAuthToken}
+                    onChange={e => setWebhookAuthToken(e.target.value)}
+                    disabled={webhookAuthType === 'none' || webhookSaving}
+                    className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                    placeholder={webhookAuthType === 'header' ? 'X-Secret: my_value' : 'Enter secret token'}
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  disabled={webhookSaving}
+                  onClick={() => setWebhookModalOpen(false)}
+                  className="px-4 py-2 border border-gray-300 hover:bg-gray-50 font-semibold rounded-lg cursor-pointer disabled:opacity-50"
+                >
+                  取消
+                </button>
+                <button
+                  type="submit"
+                  disabled={webhookSaving}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                >
+                  {webhookSaving ? '保存中...' : '确认保存'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── FORWARD RULE ADD/EDIT MODAL ── */}
+      {forwardRuleModalOpen && (
+        <div className="fixed inset-0 z-50 bg-gray-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-gray-100 shadow-xl rounded-xl p-6 max-w-md w-full space-y-4">
+            <div className="flex justify-between items-center">
+              <h4 className="text-sm font-bold text-gray-900 font-serif flex items-center gap-1.5">
+                <Link className="h-4.5 w-4.5 text-indigo-600" />
+                {editingForwardRule ? '修改邮件转发规则' : '新增邮件转发规则'}
+              </h4>
+              <button
+                disabled={forwardRuleSaving}
+                onClick={() => setForwardRuleModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 disabled:opacity-50 cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <form onSubmit={saveForwardRule} className="space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">用户名匹配正则 (Regex)</label>
+                  <input
+                    type="text"
+                    required
+                    disabled={forwardRuleSaving}
+                    value={rulePattern}
+                    onChange={e => setRulePattern(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                    placeholder="e.g. u.* 或 co"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">子域名 (Subdomain - 可选)</label>
+                  <input
+                    type="text"
+                    disabled={forwardRuleSaving}
+                    value={ruleSubdomain}
+                    onChange={e => setRuleSubdomain(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                    placeholder="e.g. mail"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">匹配收信域名 (Domain)</label>
+                  <select
+                    required
+                    value={ruleDomainId}
+                    disabled={forwardRuleSaving}
+                    onChange={e => setRuleDomainId(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50 font-mono"
+                  >
+                    <option value="">-- 选择域名 --</option>
+                    {domains.map(d => (
+                      <option key={d.id} value={d.id}>{d.domain}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">转发到目标邮箱</label>
+                  <select
+                    required
+                    value={ruleDestId}
+                    disabled={forwardRuleSaving}
+                    onChange={e => setRuleDestId(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50 font-mono"
+                  >
+                    <option value="">-- 选择转发目标 --</option>
+                    {destinations.map(dest => (
+                      <option key={dest.id} value={dest.id}>{dest.email}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  disabled={forwardRuleSaving}
+                  onClick={() => setForwardRuleModalOpen(false)}
+                  className="px-4 py-2 border border-gray-300 hover:bg-gray-50 font-semibold rounded-lg cursor-pointer disabled:opacity-50"
+                >
+                  取消
+                </button>
+                <button
+                  type="submit"
+                  disabled={forwardRuleSaving}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                >
+                  {forwardRuleSaving ? '保存中...' : '确认保存'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── WEBHOOK RULE ADD/EDIT MODAL ── */}
+      {webhookRuleModalOpen && (
+        <div className="fixed inset-0 z-50 bg-gray-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-gray-100 shadow-xl rounded-xl p-6 max-w-md w-full space-y-4">
+            <div className="flex justify-between items-center">
+              <h4 className="text-sm font-bold text-gray-900 font-serif flex items-center gap-1.5">
+                <Link className="h-4.5 w-4.5 text-indigo-600" />
+                {editingWebhookRule ? '修改 API 集成规则' : '新增 API 集成规则'}
+              </h4>
+              <button
+                disabled={webhookRuleSaving}
+                onClick={() => setWebhookRuleModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 disabled:opacity-50 cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <form onSubmit={saveWebhookRule} className="space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">用户名匹配正则 (Regex)</label>
+                  <input
+                    type="text"
+                    required
+                    disabled={webhookRuleSaving}
+                    value={webhookRulePattern}
+                    onChange={e => setWebhookRulePattern(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                    placeholder="e.g. jot_* 或 .+"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">子域名 (Subdomain - 可选)</label>
+                  <input
+                    type="text"
+                    disabled={webhookRuleSaving}
+                    value={webhookRuleSubdomain}
+                    onChange={e => setWebhookRuleSubdomain(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                    placeholder="e.g. mail"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">匹配收信域名 (Domain)</label>
+                  <select
+                    required
+                    value={webhookRuleDomainId}
+                    disabled={webhookRuleSaving}
+                    onChange={e => setWebhookRuleDomainId(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50 font-mono"
+                  >
+                    <option value="">-- 选择域名 --</option>
+                    {domains.map(d => (
+                      <option key={d.id} value={d.id}>{d.domain}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">触发 Webhook 接口</label>
+                  <select
+                    required
+                    value={webhookRuleWebhookId}
+                    disabled={webhookRuleSaving}
+                    onChange={e => setWebhookRuleWebhookId(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50 font-mono"
+                  >
+                    <option value="">-- 选择 Webhook --</option>
+                    {webhooks.map(w => (
+                      <option key={w.id} value={w.id}>{w.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  disabled={webhookRuleSaving}
+                  onClick={() => setWebhookRuleModalOpen(false)}
+                  className="px-4 py-2 border border-gray-300 hover:bg-gray-50 font-semibold rounded-lg cursor-pointer disabled:opacity-50"
+                >
+                  取消
+                </button>
+                <button
+                  type="submit"
+                  disabled={webhookRuleSaving}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                >
+                  {webhookRuleSaving ? '保存中...' : '确认保存'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Change password modal */}
       {showPasswordModal && (
-        <div className="fixed inset-0 z-55 bg-gray-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-gray-900/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white border border-gray-100 shadow-xl rounded-xl p-6 max-w-sm w-full space-y-4">
             <h4 className="text-sm font-bold text-gray-900 font-serif flex items-center gap-1.5">
               <Key className="h-4 w-4 text-indigo-600" />
@@ -1232,9 +1620,10 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                 <input
                   type="password"
                   required
+                  disabled={isChangingPassword}
                   value={newPassword}
                   onChange={e => setNewPassword(e.target.value)}
-                  className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                  className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
                   placeholder="最少 6 位"
                 />
               </div>
@@ -1242,16 +1631,18 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
               <div className="flex justify-end gap-2 text-xs">
                 <button
                   type="button"
+                  disabled={isChangingPassword}
                   onClick={() => { setShowPasswordModal(false); setNewPassword(''); }}
-                  className="px-3.5 py-1.5 border border-gray-300 hover:bg-gray-50 font-semibold rounded-lg cursor-pointer"
+                  className="px-3.5 py-1.5 border border-gray-300 hover:bg-gray-50 font-semibold rounded-lg cursor-pointer disabled:opacity-50"
                 >
                   取消
                 </button>
                 <button
                   type="submit"
-                  className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg cursor-pointer"
+                  disabled={isChangingPassword}
+                  className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg cursor-pointer disabled:opacity-50"
                 >
-                  确认修改
+                  {isChangingPassword ? '修改中...' : '确认修改'}
                 </button>
               </div>
             </form>
