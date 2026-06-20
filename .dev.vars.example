@@ -1,9 +1,6 @@
 # Base URL of your self-hosted Jotify API on the VPS (no trailing slash)
 JOTIFY_API_URL="https://zwq.me"
 
-# Shared secret token (from CRON_TOKEN in .prod.env) to authenticate routing API calls
-CRON_TOKEN="f8c144fa73d6e5be15c2d3a948e9c1db4402a8e6b12dfcde6a88b56f2f2c8db9"
-
 # Your email receiving domain (e.g. "zwq.me")
 INBOUND_DOMAIN="zwq.me"
 
