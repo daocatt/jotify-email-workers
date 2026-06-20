@@ -708,6 +708,70 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                 </ul>
               </div>
 
+              {/* Card: Regex username matching rules helper */}
+              <div className="bg-gray-50 border border-gray-150 rounded-xl p-5 space-y-3">
+                <div className="font-bold text-gray-800 text-sm flex items-center gap-1.5">
+                  <Link className="h-4.5 w-4.5 text-indigo-600" />
+                  正则表达式用户名匹配规则
+                </div>
+                <p className="text-gray-600">
+                  系统采用标准的<strong>正则表达式（Regular Expression）</strong>对邮箱的用户名（即 <code>@</code> 前面的部分）进行匹配。配置时请<strong>无需</strong>手动输入头尾的 <code>^</code> 和 <code>$</code> 符号（系统在校验匹配时已自动包含）。以下是一些常用的匹配配置方式与典型例子：
+                </p>
+                <div className="border border-gray-200 rounded-xl overflow-hidden mt-2">
+                  <table className="min-w-full divide-y divide-gray-200 text-left">
+                    <thead className="bg-gray-100 font-semibold text-gray-800">
+                      <tr>
+                        <th className="px-4 py-2 w-1/4">配置匹配模式</th>
+                        <th className="px-4 py-2 w-1/4">含义说明</th>
+                        <th className="px-4 py-2 w-1/2">匹配示例与说明</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-150 bg-white font-mono text-[11px] text-gray-600">
+                      <tr>
+                        <td className="px-4 py-2 text-indigo-600 font-semibold">jot_.*</td>
+                        <td className="px-4 py-2 text-gray-700 font-sans">以 <code>jot_</code> 开头的任意名字</td>
+                        <td className="px-4 py-2 text-gray-700 font-sans">
+                          ✅ 匹配：<code>jot_abc</code>、<code>jot_123</code>、<code>jot_</code><br/>
+                          ❌ 拒绝：<code>jot123</code>（缺少下划线）、<code>user_jot_1</code>（未以其开头）
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="px-4 py-2 text-indigo-600 font-semibold">jot_..*</td>
+                        <td className="px-4 py-2 text-gray-700 font-sans">以 <code>jot_</code> 开头且后面<strong>至少有一个字符</strong></td>
+                        <td className="px-4 py-2 text-gray-700 font-sans">
+                          ✅ 匹配：<code>jot_a</code>、<code>jot_123</code><br/>
+                          ❌ 拒绝：<code>jot_</code>（下划线后没有字符）
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="px-4 py-2 text-indigo-600 font-semibold">u\..*</td>
+                        <td className="px-4 py-2 text-gray-700 font-sans">以 <code>u.</code> 开头的任意名字</td>
+                        <td className="px-4 py-2 text-gray-700 font-sans">
+                          <em>注：点号 <code>.</code> 在正则中需写为 <code>\.</code> 进行转义。</em><br/>
+                          ✅ 匹配：<code>u.name</code>、<code>u.john</code>、<code>u.</code><br/>
+                          ❌ 拒绝：<code>uname</code>（缺少点号）
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="px-4 py-2 text-indigo-600 font-semibold">test</td>
+                        <td className="px-4 py-2 text-gray-700 font-sans">精确匹配 <code>test</code></td>
+                        <td className="px-4 py-2 text-gray-700 font-sans">
+                          ✅ 匹配：<code>test</code><br/>
+                          ❌ 拒绝：<code>test123</code>、<code>mytest</code>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="px-4 py-2 text-indigo-600 font-semibold">.*</td>
+                        <td className="px-4 py-2 text-gray-700 font-sans">匹配任意名字（通配所有）</td>
+                        <td className="px-4 py-2 text-gray-700 font-sans">
+                          ✅ 匹配：任何邮箱用户名前缀
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
               {/* Card 3: Webhook Parameters */}
               <div className="bg-gray-50 border border-gray-150 rounded-xl p-5 space-y-3">
                 <div className="font-bold text-gray-800 text-sm flex items-center gap-1.5">
