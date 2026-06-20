@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 
 // ── Better Auth Tables ───────────────────────────────────────────────────────
 
@@ -27,6 +27,10 @@ export const session = sqliteTable('session', {
   userAgent: text('userAgent'),
   createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull(),
+}, (table) => {
+  return {
+    userIdIdx: index('session_user_id_idx').on(table.userId),
+  };
 });
 
 export const account = sqliteTable('account', {
@@ -37,6 +41,10 @@ export const account = sqliteTable('account', {
   password: text('password'),
   createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull(),
+}, (table) => {
+  return {
+    userIdIdx: index('account_user_id_idx').on(table.userId),
+  };
 });
 
 export const verification = sqliteTable('verification', {
@@ -46,6 +54,10 @@ export const verification = sqliteTable('verification', {
   expiresAt: integer('expiresAt', { mode: 'timestamp' }).notNull(),
   createdAt: integer('createdAt', { mode: 'timestamp' }),
   updatedAt: integer('updatedAt', { mode: 'timestamp' }),
+}, (table) => {
+  return {
+    identifierIdx: index('verification_identifier_idx').on(table.identifier),
+  };
 });
 
 // ── Inbound Domains ──────────────────────────────────────────────────────────
@@ -55,6 +67,10 @@ export const domains = sqliteTable('domains', {
   userId: text('userId').notNull().references(() => user.id, { onDelete: 'cascade' }),
   domain: text('domain').notNull().unique(),
   createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
+}, (table) => {
+  return {
+    userIdIdx: index('domains_user_id_idx').on(table.userId),
+  };
 });
 
 // ── Forwarding Target Emails ─────────────────────────────────────────────────
@@ -64,6 +80,10 @@ export const destinations = sqliteTable('destinations', {
   userId: text('userId').notNull().references(() => user.id, { onDelete: 'cascade' }),
   email: text('email').notNull(),
   createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
+}, (table) => {
+  return {
+    userIdIdx: index('destinations_user_id_idx').on(table.userId),
+  };
 });
 
 // ── Forwarding Rules ─────────────────────────────────────────────────────────
@@ -76,6 +96,12 @@ export const forwardRules = sqliteTable('forward_rules', {
   domainId: integer('domainId').notNull().references(() => domains.id, { onDelete: 'cascade' }),
   destinationId: integer('destinationId').notNull().references(() => destinations.id, { onDelete: 'cascade' }),
   createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
+}, (table) => {
+  return {
+    userIdIdx: index('forward_rules_user_id_idx').on(table.userId),
+    domainIdIdx: index('forward_rules_domain_id_idx').on(table.domainId),
+    destinationIdIdx: index('forward_rules_destination_id_idx').on(table.destinationId),
+  };
 });
 
 // ── Webhooks ─────────────────────────────────────────────────────────────────
@@ -88,6 +114,10 @@ export const webhooks = sqliteTable('webhooks', {
   authType: text('authType').notNull().default('none'), // 'none', 'bearer', 'header'
   authToken: text('authToken'),
   createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
+}, (table) => {
+  return {
+    userIdIdx: index('webhooks_user_id_idx').on(table.userId),
+  };
 });
 
 // ── Webhook Forwarding Rules ─────────────────────────────────────────────────
@@ -100,4 +130,10 @@ export const webhookRules = sqliteTable('webhook_rules', {
   domainId: integer('domainId').notNull().references(() => domains.id, { onDelete: 'cascade' }),
   webhookId: integer('webhookId').notNull().references(() => webhooks.id, { onDelete: 'cascade' }),
   createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
+}, (table) => {
+  return {
+    userIdIdx: index('webhook_rules_user_id_idx').on(table.userId),
+    domainIdIdx: index('webhook_rules_domain_id_idx').on(table.domainId),
+    webhookIdIdx: index('webhook_rules_webhook_id_idx').on(table.webhookId),
+  };
 });
