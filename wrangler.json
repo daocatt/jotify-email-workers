@@ -2,5 +2,16 @@
   "name": "jotify-email-workers",
   "main": "src/index.ts",
   "compatibility_date": "2025-02-24",
-  "compatibility_flags": ["nodejs_compat"]
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "jotify_email_db",
+      "database_id": "placeholder-uuid-for-d1-database-id"
+    }
+  ],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS"
+  }
 }
