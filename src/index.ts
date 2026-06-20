@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { drizzle } from 'drizzle-orm/d1';
-import { eq, and, sql, or } from 'drizzle-orm';
+import { eq, and, sql, or, isNull } from 'drizzle-orm';
 import * as schema from './db/schema';
 import { getAuth } from './auth';
 import { getDb } from './db';
@@ -627,10 +627,27 @@ app.post('/api/webhook-rules', async (c) => {
     return c.json({ error: 'Invalid regex username pattern' }, 400);
   }
 
+  // Restrict to max 2 webhook endpoints per inbound address pattern
+  const cleanSubdomain = subdomain?.trim().toLowerCase() || null;
+  const existingRules = await db.select()
+    .from(schema.webhookRules)
+    .where(
+      and(
+        eq(schema.webhookRules.userId, session.dbUser.id),
+        eq(schema.webhookRules.domainId, domainId),
+        cleanSubdomain ? eq(schema.webhookRules.subdomain, cleanSubdomain) : isNull(schema.webhookRules.subdomain),
+        eq(schema.webhookRules.usernamePattern, usernamePattern)
+      )
+    );
+
+  if (existingRules.length >= 2) {
+    return c.json({ error: '每个收信地址最多只能关联两个不同的 Webhook 接口' }, 400);
+  }
+
   await db.insert(schema.webhookRules).values({
     userId: session.dbUser.id,
     usernamePattern,
-    subdomain: subdomain?.trim().toLowerCase() || null,
+    subdomain: cleanSubdomain,
     domainId,
     webhookId,
     createdAt: new Date(),
