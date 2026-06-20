@@ -1,8 +1,17 @@
 # Base URL of your self-hosted Jotify API on the VPS (no trailing slash)
 JOTIFY_API_URL="https://zwq.me"
 
-# Your email receiving domain (e.g. "zwq.me")
-INBOUND_DOMAIN="zwq.me"
-
 # Inbound API Ingestion Token generated from the Jotify Admin Console
 INBOUND_API_TOKEN="your_generated_inbound_api_token"
+
+# Better Auth Configuration
+BETTER_AUTH_SECRET="a_random_32_character_better_auth_secret_here"
+BETTER_AUTH_URL="http://localhost:8787" # The URL of this email worker dashboard (e.g. for development or production)
+
+# Resend API Key for sending verification code emails
+RESEND_API_KEY="re_123456789"
+
+# System and User Control Flags
+ALLOW_REGISTER="true"       # Set to "false" to disable registration
+REQUIRE_APPROVAL="true"     # Set to "false" to auto-approve new registrants
+MAX_DOMAINS_PER_USER="1"    # Maximum domains allowed per standard user
