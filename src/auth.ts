@@ -16,5 +16,9 @@ export function getAuth(d1: D1Database, secret: string, baseUrl: string) {
     },
     secret,
     baseURL: baseUrl,
+    trustedOrigins: [
+      'http://localhost:5173',
+      'http://localhost:5174',
+    ],
   });
 }

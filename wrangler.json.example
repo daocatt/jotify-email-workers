@@ -7,9 +7,22 @@
     {
       "binding": "DB",
       "database_name": "jotify_email_db",
-      "database_id": "placeholder-uuid-for-d1-database-id"
+      "database_id": "YOUR_D1_DATABASE_ID_HERE"
     }
   ],
+  "r2_buckets": [
+    {
+      "binding": "ATTACHMENT_BUCKET",
+      "bucket_name": "YOUR_R2_BUCKET_NAME_HERE"
+    }
+  ],
+  "routes": [
+    {
+      "pattern": "your-custom-domain.com",
+      "custom_domain": true
+    }
+  ],
+  "workers_dev": false,
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS"
