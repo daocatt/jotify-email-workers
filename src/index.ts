@@ -565,6 +565,48 @@ app.delete('/api/forward-rules/:id', async (c) => {
   return c.json({ success: true });
 });
 
+app.put('/api/forward-rules/:id', async (c) => {
+  const session = await getSessionUser(c);
+  if (!session) return c.json({ error: 'Unauthorized' }, 401);
+
+  const id = parseInt(c.req.param('id'));
+  const { usernamePattern, subdomain, domainId, destinationId } = await c.req.json();
+  if (!usernamePattern || !domainId || !destinationId) {
+    return c.json({ error: 'Missing parameters' }, 400);
+  }
+
+  // Validate regex pattern
+  try {
+    new RegExp(usernamePattern);
+  } catch {
+    return c.json({ error: 'Invalid regex username pattern' }, 400);
+  }
+
+  const db = getDb(c.env.DB);
+  // Verify domain and destination belong to user
+  const ownDomain = await db.select().from(schema.domains)
+    .where(and(eq(schema.domains.id, domainId), eq(schema.domains.userId, session.dbUser.id)))
+    .then(r => r[0]);
+  const ownDest = await db.select().from(schema.destinations)
+    .where(and(eq(schema.destinations.id, destinationId), eq(schema.destinations.userId, session.dbUser.id)))
+    .then(r => r[0]);
+
+  if (!ownDomain || !ownDest) {
+    return c.json({ error: 'Invalid domain or destination' }, 400);
+  }
+
+  await db.update(schema.forwardRules)
+    .set({
+      usernamePattern,
+      subdomain: subdomain?.trim().toLowerCase() || null,
+      domainId,
+      destinationId,
+    })
+    .where(and(eq(schema.forwardRules.id, id), eq(schema.forwardRules.userId, session.dbUser.id)));
+
+  return c.json({ success: true });
+});
+
 // ── Webhooks CRUD ────────────────────────────────────────────────────────────
 
 app.get('/api/webhooks', async (c) => {
@@ -607,6 +649,29 @@ app.delete('/api/webhooks/:id', async (c) => {
   await db.delete(schema.webhooks).where(
     and(eq(schema.webhooks.id, id), eq(schema.webhooks.userId, session.dbUser.id))
   );
+  return c.json({ success: true });
+});
+
+app.put('/api/webhooks/:id', async (c) => {
+  const session = await getSessionUser(c);
+  if (!session) return c.json({ error: 'Unauthorized' }, 401);
+
+  const id = parseInt(c.req.param('id'));
+  const { name, url, authType, authToken } = await c.req.json();
+  if (!name || !url) {
+    return c.json({ error: 'Missing parameters' }, 400);
+  }
+
+  const db = getDb(c.env.DB);
+  await db.update(schema.webhooks)
+    .set({
+      name,
+      url,
+      authType: authType || 'none',
+      authToken: authToken || null,
+    })
+    .where(and(eq(schema.webhooks.id, id), eq(schema.webhooks.userId, session.dbUser.id)));
+
   return c.json({ success: true });
 });
 
@@ -688,6 +753,66 @@ app.delete('/api/webhook-rules/:id', async (c) => {
   await db.delete(schema.webhookRules).where(
     and(eq(schema.webhookRules.id, id), eq(schema.webhookRules.userId, session.dbUser.id))
   );
+  return c.json({ success: true });
+});
+
+app.put('/api/webhook-rules/:id', async (c) => {
+  const session = await getSessionUser(c);
+  if (!session) return c.json({ error: 'Unauthorized' }, 401);
+
+  const id = parseInt(c.req.param('id'));
+  const { usernamePattern, subdomain, domainId, webhookId } = await c.req.json();
+  if (!usernamePattern || !domainId || !webhookId) {
+    return c.json({ error: 'Missing parameters' }, 400);
+  }
+
+  // Validate regex pattern
+  try {
+    new RegExp(usernamePattern);
+  } catch {
+    return c.json({ error: 'Invalid regex username pattern' }, 400);
+  }
+
+  const db = getDb(c.env.DB);
+  // Verify domain and webhook belong to user
+  const ownDomain = await db.select().from(schema.domains)
+    .where(and(eq(schema.domains.id, domainId), eq(schema.domains.userId, session.dbUser.id)))
+    .then(r => r[0]);
+  const ownWebhook = await db.select().from(schema.webhooks)
+    .where(and(eq(schema.webhooks.id, webhookId), eq(schema.webhooks.userId, session.dbUser.id)))
+    .then(r => r[0]);
+
+  if (!ownDomain || !ownWebhook) {
+    return c.json({ error: 'Invalid domain or webhook' }, 400);
+  }
+
+  // Restrict to max 2 webhook endpoints per inbound address pattern (excluding self)
+  const cleanSubdomain = subdomain?.trim().toLowerCase() || null;
+  const existingRules = await db.select()
+    .from(schema.webhookRules)
+    .where(
+      and(
+        eq(schema.webhookRules.userId, session.dbUser.id),
+        eq(schema.webhookRules.domainId, domainId),
+        cleanSubdomain ? eq(schema.webhookRules.subdomain, cleanSubdomain) : isNull(schema.webhookRules.subdomain),
+        eq(schema.webhookRules.usernamePattern, usernamePattern),
+        sql`${schema.webhookRules.id} != ${id}`
+      )
+    );
+
+  if (existingRules.length >= 2) {
+    return c.json({ error: '每个收信地址最多只能关联两个不同的 Webhook 接口' }, 400);
+  }
+
+  await db.update(schema.webhookRules)
+    .set({
+      usernamePattern,
+      subdomain: cleanSubdomain,
+      domainId,
+      webhookId,
+    })
+    .where(and(eq(schema.webhookRules.id, id), eq(schema.webhookRules.userId, session.dbUser.id)));
+
   return c.json({ success: true });
 });
 

@@ -14,6 +14,7 @@ export default function Login({ config, setView, onLoginSuccess }: LoginProps) {
   const [authSuccess, setAuthSuccess] = useState('');
   const [turnstileToken, setTurnstileToken] = useState('');
   const [turnstileLoaded, setTurnstileLoaded] = useState(!!(window as any).turnstile);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if ((window as any).turnstile) {
@@ -31,11 +32,13 @@ export default function Login({ config, setView, onLoginSuccess }: LoginProps) {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setAuthError('');
     if (config.turnstileSiteKey && !turnstileToken) {
       setAuthError('请先完成人机验证');
       return;
     }
+    setIsSubmitting(true);
     try {
       const res = await fetch('/api/auth/sign-in/email', {
         method: 'POST',
@@ -50,6 +53,8 @@ export default function Login({ config, setView, onLoginSuccess }: LoginProps) {
       }
     } catch {
       setAuthError('网络错误，请稍后重试');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -83,9 +88,10 @@ export default function Login({ config, setView, onLoginSuccess }: LoginProps) {
               <input
                 type="email"
                 required
+                disabled={isSubmitting}
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                className="w-full text-sm px-3.5 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full text-sm px-3.5 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50"
                 placeholder="name@domain.com"
               />
             </div>
@@ -95,9 +101,10 @@ export default function Login({ config, setView, onLoginSuccess }: LoginProps) {
               <input
                 type="password"
                 required
+                disabled={isSubmitting}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full text-sm px-3.5 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full text-sm px-3.5 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50"
                 placeholder="******"
               />
             </div>
@@ -128,19 +135,20 @@ export default function Login({ config, setView, onLoginSuccess }: LoginProps) {
 
             <button
               type="submit"
-              className="w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 cursor-pointer transition-colors shadow-xs"
+              disabled={isSubmitting}
+              className="w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 cursor-pointer transition-colors shadow-xs disabled:opacity-50 flex items-center justify-center gap-1.5"
             >
-              登录
+              {isSubmitting ? '登录中...' : '登录'}
             </button>
           </form>
 
           <div className="mt-6 flex justify-between items-center text-xs text-indigo-600">
             {config.allowRegister ? (
-              <button onClick={() => setView('register')} className="hover:underline cursor-pointer">注册账号</button>
+              <button onClick={() => setView('register')} disabled={isSubmitting} className="hover:underline cursor-pointer disabled:opacity-50">注册账号</button>
             ) : (
               <span className="text-gray-400">自主注册已关闭</span>
             )}
-            <button onClick={() => setView('forgot')} className="hover:underline cursor-pointer">忘记密码？</button>
+            <button onClick={() => setView('forgot')} disabled={isSubmitting} className="hover:underline cursor-pointer disabled:opacity-50">忘记密码？</button>
           </div>
         </div>
       </div>
