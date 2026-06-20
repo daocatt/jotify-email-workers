@@ -1012,8 +1012,8 @@ export default {
     const now = new Date();
 
     try {
-      // Fetch all failed webhooks from D1 database
-      const failedList = await db.select().from(schema.failedWebhooks);
+      // Fetch up to 30 failed webhooks to avoid hitting Cloudflare subrequest limits (max 50 per invocation)
+      const failedList = await db.select().from(schema.failedWebhooks).limit(30);
 
       for (const record of failedList) {
         const createdAt = new Date(record.createdAt);
