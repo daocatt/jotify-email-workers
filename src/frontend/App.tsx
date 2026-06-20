@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
   ShieldAlert, LogOut, Plus, Trash2, Key, Users, CheckCircle,
-  XCircle, Mail, Globe, Server, Link, AlertCircle, RefreshCw, Send
+  XCircle, Mail, Globe, Server, Link, AlertCircle, RefreshCw, Send,
+  Menu, X
 } from 'lucide-react';
 
 export default function App() {
@@ -29,6 +30,7 @@ export default function App() {
 
   // Dashboard state
   const [activeTab, setActiveTab] = useState<'domains' | 'destinations' | 'forwardRules' | 'webhooks' | 'webhookRules' | 'admin' | 'superadmin'>('domains');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [newPassword, setNewPassword] = useState('');
 
@@ -684,6 +686,13 @@ export default function App() {
       <header className="bg-white border-b border-gray-100 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-1.5 text-gray-500 hover:text-indigo-600 rounded-lg hover:bg-gray-50 transition-colors md:hidden cursor-pointer mr-1"
+              title="导航菜单"
+            >
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
             <Globe className="h-6 w-6 text-indigo-600" />
             <h1 className="text-lg font-bold text-gray-900 font-serif">Jotify Email Router</h1>
           </div>
@@ -714,9 +723,9 @@ export default function App() {
       <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row gap-8">
 
         {/* Left navigation sidebar */}
-        <aside className="w-full md:w-56 shrink-0 flex flex-col gap-1.5">
+        <aside className={`${mobileMenuOpen ? 'flex' : 'hidden'} md:flex w-full md:w-56 shrink-0 flex-col gap-1.5`}>
           <button
-            onClick={() => setActiveTab('domains')}
+            onClick={() => { setActiveTab('domains'); setMobileMenuOpen(false); }}
             className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'domains' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
               }`}
           >
@@ -725,7 +734,7 @@ export default function App() {
           </button>
 
           <button
-            onClick={() => setActiveTab('destinations')}
+            onClick={() => { setActiveTab('destinations'); setMobileMenuOpen(false); }}
             className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'destinations' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
               }`}
           >
@@ -734,7 +743,7 @@ export default function App() {
           </button>
 
           <button
-            onClick={() => setActiveTab('forwardRules')}
+            onClick={() => { setActiveTab('forwardRules'); setMobileMenuOpen(false); }}
             className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'forwardRules' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
               }`}
           >
@@ -743,7 +752,7 @@ export default function App() {
           </button>
 
           <button
-            onClick={() => setActiveTab('webhooks')}
+            onClick={() => { setActiveTab('webhooks'); setMobileMenuOpen(false); }}
             className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'webhooks' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
               }`}
           >
@@ -752,7 +761,7 @@ export default function App() {
           </button>
 
           <button
-            onClick={() => setActiveTab('webhookRules')}
+            onClick={() => { setActiveTab('webhookRules'); setMobileMenuOpen(false); }}
             className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'webhookRules' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
               }`}
           >
@@ -762,7 +771,7 @@ export default function App() {
 
           {isAdmin && (
             <button
-              onClick={() => setActiveTab('admin')}
+              onClick={() => { setActiveTab('admin'); setMobileMenuOpen(false); }}
               className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'admin' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
                 }`}
             >
@@ -773,7 +782,7 @@ export default function App() {
 
           {isSuperadmin && (
             <button
-              onClick={() => setActiveTab('superadmin')}
+              onClick={() => { setActiveTab('superadmin'); setMobileMenuOpen(false); }}
               className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'superadmin' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
                 }`}
             >
