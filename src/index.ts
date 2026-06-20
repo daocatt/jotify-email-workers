@@ -32,7 +32,7 @@ const app = new Hono<{ Bindings: Bindings }>();
 
 app.use('*', cors({
   origin: (origin, c) => {
-    if (!origin) return '*';
+    if (!origin) return null;
     // Allow local development
     if (origin === 'http://localhost:5173' || origin === 'http://localhost:8787') {
       return origin;
