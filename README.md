@@ -56,7 +56,7 @@ graph TD
     Sender[外部发件人] -->|发送至 u.john@your-domain.com| CF[Cloudflare Email Routing]
     CF -->|投递到| Worker[jotify-email-workers]
     Worker -->|匹配正则: ^u\..*$| Rule[查找转发规则并匹配目标]
-    Rule -->|找到绑定目标| Target[个人私密邮箱 (如 john@gmail.com)]
+    Rule -->|找到绑定目标| Target["个人私密邮箱 (如 john@gmail.com)"]
     Worker -->|调用 message.forward| CF_Forward[Cloudflare Email Routing 转发]
     CF_Forward -->|投递| Target
 ```
@@ -72,8 +72,8 @@ graph TD
     Sender[用户/发送者] -->|发送邮件, 携带正文与图片附件| CF[Cloudflare Email Routing]
     CF -->|投递到| Worker[jotify-email-workers]
     Worker -->|1. 将图片附件存入| R2[Cloudflare R2 存储桶]
-    Worker -->|2. 提取文本正文与 R2 链接| Webhook[触发 Webhook (API POST)]
-    Webhook -->|投递 JSON Payload| App[你的自建网站/应用, 如 Jotify]
+    Worker -->|2. 提取文本正文与 R2 链接| Webhook["触发 Webhook (API POST)"]
+    Webhook -->|投递 JSON Payload| App["你的自建网站/应用, 如 Jotify"]
     App -->|解析正文和图片| Article[公开文章/日记]
 ```
 
