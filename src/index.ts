@@ -794,6 +794,21 @@ async function streamToArrayBuffer(stream: ReadableStream, size: number): Promis
   return result.buffer;
 }
 
+function stripHtml(html: string): string {
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 // ── Export Unified Cloudflare Worker Handlers ────────────────────────────────
 
 export default {
@@ -888,7 +903,7 @@ export default {
           const parser = new PostalMime();
           const parsed = await parser.parse(rawEmail);
           const subject = parsed.subject || '';
-          const text = parsed.text || parsed.html?.replace(/<[^>]+>/g, '') || '';
+          const text = parsed.text || stripHtml(parsed.html || '');
 
           const payload = {
             to: to,
