@@ -18,8 +18,8 @@ interface Bindings {
   ALLOW_REGISTER: string; // 'true' or 'false'
   REQUIRE_APPROVAL: string; // 'true' or 'false'
   MAX_DOMAINS_PER_USER: string; // default "1"
-  JOTIFY_API_URL: string; // VPS URL (no trailing slash)
-  INBOUND_API_TOKEN: string; // Inbound post token for Hono VPS
+  RESEND_FROM_NAME?: string;
+  RESEND_FROM_EMAIL?: string;
 }
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -127,6 +127,8 @@ app.post('/api/public/send-code', async (c) => {
 
   // Send email via Resend API
   try {
+    const fromName = c.env.RESEND_FROM_NAME || 'Jotify Mailer';
+    const fromEmail = c.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -134,7 +136,7 @@ app.post('/api/public/send-code', async (c) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Jotify Mailer <onboarding@resend.dev>',
+        from: `${fromName} <${fromEmail}>`,
         to: [email],
         subject: `[Jotify] Verification Code: ${code}`,
         text: `Your verification code is: ${code}. It expires in 10 minutes.`,
@@ -665,32 +667,6 @@ app.delete('/api/admin/users/:id', async (c) => {
 
 // ── Inbound Email Forwarding / Ingestion Trigger Logic ───────────────────────
 
-async function forwardRawMimeToJotify(message: any, env: Bindings): Promise<void> {
-  const rawEmail = await streamToArrayBuffer(message.raw, message.rawSize);
-  const targetUrl = `${env.JOTIFY_API_URL}/api/inbound/email`;
-
-  try {
-    const res = await fetch(targetUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/octet-stream',
-        'X-Inbound-Token': env.INBOUND_API_TOKEN,
-      },
-      body: rawEmail,
-    });
-
-    if (!res.ok) {
-      const errBody = await res.text();
-      throw new Error(`Jotify API returned ${res.status}: ${errBody}`);
-    }
-
-    console.log(`[Email Worker] Inbound email successfully ingested by Jotify API.`);
-  } catch (err) {
-    console.error(`[Email Worker] Failed to forward raw email to Jotify API:`, err);
-    throw err;
-  }
-}
-
 async function streamToArrayBuffer(stream: ReadableStream, size: number): Promise<ArrayBuffer> {
   const reader = stream.getReader();
   const result = new Uint8Array(size);
@@ -736,14 +712,7 @@ export default {
 
     const username = to.split('@')[0];
 
-    // 2. Random email ingestion check: starts with "jot_"
-    if (username.startsWith('jot_')) {
-      console.log(`[Email Worker] Random email prefix matched! Forwarding raw MIME to Jotify VPS...`);
-      await forwardRawMimeToJotify(message, env);
-      return;
-    }
-
-    // 3. Match forwarding rules (regex)
+    // 2. Match forwarding rules (regex)
     const allForwardRules = await db.select({
       rule: schema.forwardRules,
       domain: schema.domains.domain,
@@ -774,7 +743,7 @@ export default {
       }
     }
 
-    // 4. Match webhook rules (regex)
+    // 3. Match webhook rules (regex)
     const allWebhookRules = await db.select({
       rule: schema.webhookRules,
       domain: schema.domains.domain,
