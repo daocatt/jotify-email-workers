@@ -52,7 +52,12 @@ export default function App() {
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/sign-out', { method: 'POST' });
+      await fetch('/api/auth/sign-out', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
     } finally {
       setUser(null);
       setSession(null);
