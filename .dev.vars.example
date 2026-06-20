@@ -4,10 +4,14 @@ BETTER_AUTH_URL="http://localhost:8787" # The URL of this email worker dashboard
 
 # Resend API Configuration
 RESEND_API_KEY="re_123456789"
-RESEND_FROM_NAME="Jotify Mailer"             # Optional: custom sender name
+RESEND_FROM_NAME="Jotify"             # Optional: custom sender name
 RESEND_FROM_EMAIL="onboarding@resend.dev"     # Optional: custom verified sender email
 
 # System and User Control Flags
 ALLOW_REGISTER="true"       # Set to "false" to disable registration
 REQUIRE_APPROVAL="true"     # Set to "false" to auto-approve new registrants
 MAX_DOMAINS_PER_USER="1"    # Maximum domains allowed per standard user
+
+# Default Superadmin Credentials (seeded if database is empty)
+SUPERADMIN_EMAIL="jotify@zwq.me"
+SUPERADMIN_PASSWORD="admin123456"

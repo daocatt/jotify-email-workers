@@ -20,6 +20,8 @@ interface Bindings {
   MAX_DOMAINS_PER_USER: string; // default "1"
   RESEND_FROM_NAME?: string;
   RESEND_FROM_EMAIL?: string;
+  SUPERADMIN_EMAIL?: string;
+  SUPERADMIN_PASSWORD?: string;
 }
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -52,20 +54,22 @@ app.use('*', async (c, next) => {
   const db = getDb(c.env.DB);
   const userCount = await db.select({ count: sql`count(*)` }).from(schema.user).then(r => r[0]?.count || 0);
   if (userCount === 0) {
-    console.log('🌱 Seeding default superadmin user admin@jotify.cc...');
+    const adminEmail = c.env.SUPERADMIN_EMAIL || 'jotify@zwq.me';
+    const adminPassword = c.env.SUPERADMIN_PASSWORD || 'admin123456';
+    console.log(`🌱 Seeding default superadmin user ${adminEmail}...`);
     try {
       const auth = getAuth(c.env.DB, c.env.BETTER_AUTH_SECRET, c.env.BETTER_AUTH_URL);
       await auth.api.signUpEmail({
         body: {
-          email: 'admin@jotify.cc',
-          password: 'admin123456',
+          email: adminEmail,
+          password: adminPassword,
           name: 'Super Admin',
         }
       });
       // Force status to approved and role to superadmin
       await db.update(schema.user)
         .set({ role: 'superadmin', status: 'approved' })
-        .where(eq(schema.user.email, 'admin@jotify.cc'));
+        .where(eq(schema.user.email, adminEmail));
       console.log('✅ Superadmin seeded successfully.');
     } catch (err: any) {
       console.error('❌ Superadmin seeding failed:', err.message);
