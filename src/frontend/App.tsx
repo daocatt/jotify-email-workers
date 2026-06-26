@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw } from 'lucide-react';
 import Login from './Login';
 import Register from './Register';
 import ForgotPassword from './ForgotPassword';
@@ -68,8 +67,14 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <RefreshCw className="animate-spin text-indigo-600 h-10 w-10" />
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="flex items-center gap-3 font-mono text-sm text-gray-500">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+          </span>
+          <span>Loading...</span>
+        </div>
       </div>
     );
   }

@@ -7,3 +7,4 @@ wrangler.json
 .prod.vars
 
 docs/fixed_*
+docs/ui_upgrade*
