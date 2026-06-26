@@ -138,7 +138,7 @@ export const webhookRules = sqliteTable('webhook_rules', {
   };
 });
 
-// ── Failed Webhooks Persistence ──────────────────────────────────────────────
+// ── Failed Webhooks Persistence (legacy, kept for backward compat) ────────────
 
 export const failedWebhooks = sqliteTable('failed_webhooks', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -154,5 +154,17 @@ export const failedWebhooks = sqliteTable('failed_webhooks', {
   return {
     userIdIdx: index('failed_webhooks_user_id_idx').on(table.userId),
     webhookIdIdx: index('failed_webhooks_webhook_id_idx').on(table.webhookId),
+  };
+});
+
+// ── Inbound Delivery Idempotency (dedup Cloudflare re-delivery) ──────────────
+
+export const deliveryIdempotency = sqliteTable('delivery_idempotency', {
+  idempotencyKey: text('idempotency_key').primaryKey(),
+  status: text('status').notNull(), // 'pending' | 'sent' | 'failed'
+  createdAt: text('created_at').notNull(),
+}, (table) => {
+  return {
+    createdAtIdx: index('delivery_idempotency_created_at_idx').on(table.createdAt),
   };
 });

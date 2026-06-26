@@ -5,3 +5,5 @@ dist/
 upgrade_plan.md
 wrangler.json
 .prod.vars
+
+docs/fixed_*
