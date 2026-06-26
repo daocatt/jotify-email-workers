@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Globe, ShieldAlert, CheckCircle, Send } from 'lucide-react';
 
 interface RegisterProps {
   config: any;
@@ -91,45 +90,43 @@ export default function Register({ config, setView }: RegisterProps) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-gray-50">
+    <div className="min-h-screen flex flex-col justify-center py-12 px-4 bg-white">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <Globe className="mx-auto h-12 w-12 text-indigo-600" />
-        <h2 className="mt-4 text-3xl font-bold tracking-tight text-gray-900">
-          注册新账号
-        </h2>
+        <h1 className="text-3xl font-black tracking-tight text-black">
+          Create account
+        </h1>
+        <p className="mt-2 text-sm text-gray-500">Register a new mailbox dashboard account</p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow-sm sm:rounded-xl sm:px-10 border border-gray-100">
+        <div className="bg-white border border-gray-100 py-8 px-6 sm:px-10 rounded">
           <form className="space-y-5" onSubmit={handleRegister}>
             {authError && (
-              <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-xs flex items-center gap-2">
-                <ShieldAlert className="h-4 w-4 shrink-0" />
-                <span>{authError}</span>
+              <div className="border border-red-200 bg-red-50 text-red-700 px-3 py-2 rounded text-xs font-mono">
+                <span>✗ {authError}</span>
               </div>
             )}
             {authSuccess && (
-              <div className="bg-green-50 border border-green-200 text-green-700 p-3 rounded-lg text-xs flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 shrink-0" />
-                <span>{authSuccess}</span>
+              <div className="border border-green-200 bg-green-50 text-green-700 px-3 py-2 rounded text-xs font-mono">
+                <span>✓ {authSuccess}</span>
               </div>
             )}
 
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">昵称 / 姓名</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5 font-mono">NAME</label>
               <input
                 type="text"
                 required
                 disabled={isSubmitting}
                 value={name}
                 onChange={e => setName(e.target.value)}
-                className="w-full text-sm px-3.5 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50"
+                className="w-full text-sm px-3.5 py-2 border border-gray-200 rounded focus:outline-none focus:border-black focus:ring-0 disabled:opacity-50 transition-colors"
                 placeholder="如 Admin"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">电子邮箱</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5 font-mono">EMAIL</label>
               <div className="flex gap-2">
                 <input
                   type="email"
@@ -137,23 +134,22 @@ export default function Register({ config, setView }: RegisterProps) {
                   disabled={isSubmitting}
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  className="flex-1 text-sm px-3.5 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50"
+                  className="flex-1 text-sm px-3.5 py-2 border border-gray-200 rounded font-mono focus:outline-none focus:border-black focus:ring-0 disabled:opacity-50 transition-colors"
                   placeholder="name@domain.com"
                 />
                 <button
                   type="button"
                   disabled={sendCodeLoading || isSubmitting}
                   onClick={sendVerificationCode}
-                  className="px-3 text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold rounded-lg hover:bg-indigo-100 disabled:opacity-50 flex items-center gap-1 cursor-pointer shrink-0"
+                  className="px-3 text-xs bg-gray-50 text-black border border-gray-200 font-semibold rounded hover:bg-gray-100 disabled:opacity-50 flex items-center gap-1 cursor-pointer shrink-0 transition-colors"
                 >
-                  <Send className="h-3.5 w-3.5" />
-                  发送验证码
+                  {sendCodeLoading ? '...' : '发送验证码'}
                 </button>
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">邮箱验证码</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5 font-mono">VERIFICATION CODE</label>
               <input
                 type="text"
                 required
@@ -161,21 +157,21 @@ export default function Register({ config, setView }: RegisterProps) {
                 maxLength={6}
                 value={code}
                 onChange={e => setCode(e.target.value)}
-                className="w-full text-sm px-3.5 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-center font-mono tracking-widest disabled:opacity-50"
-                placeholder="输入 6 位验证码"
+                className="w-full text-sm px-3.5 py-2 border border-gray-200 rounded focus:outline-none focus:border-black focus:ring-0 text-center font-mono tracking-widest disabled:opacity-50 transition-colors"
+                placeholder="------"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">密码</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5 font-mono">PASSWORD</label>
               <input
                 type="password"
                 required
                 disabled={isSubmitting}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full text-sm px-3.5 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50"
-                placeholder="******"
+                className="w-full text-sm px-3.5 py-2 border border-gray-200 rounded font-mono focus:outline-none focus:border-black focus:ring-0 disabled:opacity-50 transition-colors"
+                placeholder="••••••"
               />
             </div>
 
@@ -206,14 +202,14 @@ export default function Register({ config, setView }: RegisterProps) {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 cursor-pointer transition-colors shadow-xs disabled:opacity-50 flex items-center justify-center gap-1.5"
+              className="w-full py-2.5 bg-black text-white text-sm font-semibold rounded hover:bg-gray-800 active:bg-black cursor-pointer transition-colors duration-150 disabled:opacity-50 flex items-center justify-center gap-1.5 tracking-tight"
             >
-              {isSubmitting ? '正在提交...' : '注册并提交审核'}
+              {isSubmitting ? 'Submitting...' : 'Register →'}
             </button>
           </form>
 
-          <div className="mt-6 flex justify-center text-xs text-indigo-600">
-            <button onClick={() => setView('login')} disabled={isSubmitting} className="hover:underline cursor-pointer disabled:opacity-50">返回登录</button>
+          <div className="mt-6 flex justify-center text-xs">
+            <button onClick={() => setView('login')} disabled={isSubmitting} className="text-gray-600 hover:text-black cursor-pointer disabled:opacity-50 transition-colors">← 返回登录</button>
           </div>
         </div>
       </div>

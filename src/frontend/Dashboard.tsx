@@ -489,14 +489,14 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
           <button
             disabled={currentPage === 1}
             onClick={() => onPageChange(currentPage - 1)}
-            className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
+            className="relative inline-flex items-center rounded-md border border-gray-200 bg-white px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
           >
             上一页
           </button>
           <button
             disabled={currentPage === totalPages}
             onClick={() => onPageChange(currentPage + 1)}
-            className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
+            className="relative ml-3 inline-flex items-center rounded-md border border-gray-200 bg-white px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
           >
             下一页
           </button>
@@ -512,7 +512,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
             </p>
           </div>
           <div>
-            <nav className="isolate inline-flex -space-x-px rounded-md shadow-xs" aria-label="Pagination">
+            <nav className="isolate inline-flex -space-x-px rounded-md " aria-label="Pagination">
               <button
                 disabled={currentPage === 1}
                 onClick={() => onPageChange(currentPage - 1)}
@@ -546,28 +546,35 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
   const isSuperadmin = user?.role === 'superadmin';
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col">
       {/* Header */}
-      <header className="bg-white border-b border-gray-100 shadow-xs">
+      <header className="bg-white border-b border-gray-100 ">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-1.5 text-gray-500 hover:text-indigo-600 rounded-lg hover:bg-gray-50 transition-colors md:hidden cursor-pointer mr-1"
+              className="p-1.5 text-gray-500 hover:text-gray-600 rounded hover:bg-gray-50 transition-colors md:hidden cursor-pointer mr-1"
               title="导航菜单"
             >
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
-            <Globe className="h-6 w-6 text-indigo-600" />
-            <h1 className="text-lg font-bold text-gray-900 font-serif">Jotify Email Router</h1>
+            <Globe className="h-5 w-5 text-black" />
+            <h1 className="text-base font-bold text-black tracking-tight font-mono">Jotify Email Router</h1>
+            <span className="hidden sm:inline-flex items-center space-x-1.5 ml-3 border border-gray-100 bg-gray-50/50 px-2 py-0.5 rounded-full text-[10px] font-mono text-gray-500">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
+              </span>
+              <span>Operational</span>
+            </span>
           </div>
 
           <div className="flex items-center gap-4 text-sm text-gray-700">
-            <span className="hidden sm:inline font-medium">{user?.name} ({user?.email})</span>
+            <span className="hidden sm:inline font-mono text-xs text-gray-500">{user?.email}</span>
 
             <button
               onClick={() => setShowPasswordModal(true)}
-              className="p-2 text-gray-500 hover:text-indigo-600 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1 cursor-pointer"
+              className="p-2 text-gray-500 hover:text-gray-600 rounded hover:bg-gray-50 transition-colors flex items-center gap-1 cursor-pointer"
               title="修改密码"
             >
               <Key className="h-4 w-4" />
@@ -575,7 +582,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
 
             <button
               onClick={onLogout}
-              className="p-2 text-gray-500 hover:text-red-600 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1 cursor-pointer"
+              className="p-2 text-gray-500 hover:text-red-600 rounded hover:bg-gray-50 transition-colors flex items-center gap-1 cursor-pointer"
               title="退出登录"
             >
               <LogOut className="h-4 w-4" />
@@ -594,7 +601,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
             <div className="px-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">基础配置</div>
             <button
               onClick={() => { setActiveTab('domains'); setMobileMenuOpen(false); }}
-              className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'domains' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+              className={`w-full text-left px-4 py-2 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'domains' ? 'bg-black text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
                 }`}
             >
               <Globe className="h-4 w-4" />
@@ -603,11 +610,11 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
           </div>
 
           {/* Group 1: Mail Forwarding */}
-          <div className="flex flex-col gap-1 border-l-2 border-indigo-100 pl-2">
-            <div className="px-2 text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-1.5">邮件转发设置</div>
+          <div className="flex flex-col gap-1 border-l-2 border-gray-100 pl-2">
+            <div className="px-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">邮件转发设置</div>
             <button
               onClick={() => { setActiveTab('destinations'); setMobileMenuOpen(false); }}
-              className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'destinations' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+              className={`w-full text-left px-3 py-2 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'destinations' ? 'bg-black text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
                 }`}
             >
               <Mail className="h-4 w-4" />
@@ -616,7 +623,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
 
             <button
               onClick={() => { setActiveTab('forwardRules'); setMobileMenuOpen(false); }}
-              className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'forwardRules' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+              className={`w-full text-left px-3 py-2 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'forwardRules' ? 'bg-black text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
                 }`}
             >
               <Link className="h-4 w-4" />
@@ -629,7 +636,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
             <div className="px-2 text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-1.5">API 集成设置</div>
             <button
               onClick={() => { setActiveTab('webhooks'); setMobileMenuOpen(false); }}
-              className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'webhooks' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+              className={`w-full text-left px-3 py-2 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'webhooks' ? 'bg-black text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
                 }`}
             >
               <Server className="h-4 w-4" />
@@ -638,7 +645,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
 
             <button
               onClick={() => { setActiveTab('webhookRules'); setMobileMenuOpen(false); }}
-              className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'webhookRules' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+              className={`w-full text-left px-3 py-2 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'webhookRules' ? 'bg-black text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
                 }`}
             >
               <Link className="h-4 w-4" />
@@ -651,7 +658,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
             <div className="px-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">说明文档</div>
             <button
               onClick={() => { setActiveTab('help'); setMobileMenuOpen(false); }}
-              className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'help' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+              className={`w-full text-left px-3 py-2 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'help' ? 'bg-black text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
                 }`}
             >
               <AlertCircle className="h-4 w-4" />
@@ -666,7 +673,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
               {isAdmin && (
                 <button
                   onClick={() => { setActiveTab('admin'); setMobileMenuOpen(false); }}
-                  className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'admin' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+                  className={`w-full text-left px-4 py-2 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'admin' ? 'bg-black text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
                     }`}
                 >
                   <Users className="h-4 w-4" />
@@ -677,7 +684,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
               {isSuperadmin && (
                 <button
                   onClick={() => { setActiveTab('superadmin'); setMobileMenuOpen(false); }}
-                  className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'superadmin' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+                  className={`w-full text-left px-4 py-2 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'superadmin' ? 'bg-black text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
                     }`}
                 >
                   <Users className="h-4 w-4" />
@@ -689,7 +696,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
         </aside>
 
         {/* Right Tab Content area */}
-        <main className="flex-1 min-w-0 bg-white border border-gray-100 rounded-xl p-6 shadow-xs">
+        <main className="flex-1 min-w-0 bg-white border border-gray-100 rounded p-6 ">
 
           {/* Help tab */}
           {activeTab === 'help' && (
@@ -697,9 +704,9 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
               <div>
                 <h3 className="text-base font-bold text-gray-900 font-serif">系统使用帮助</h3>
               </div>
-              <div className="bg-gray-50 border border-gray-150 rounded-xl p-5 space-y-3">
+              <div className="bg-gray-50 border border-gray-150 rounded p-5 space-y-3">
                 <div className="font-bold text-gray-800 text-sm flex items-center gap-1.5">
-                  <Mail className="h-4.5 w-4.5 text-indigo-600" />
+                  <Mail className="h-4.5 w-4.5 text-gray-600" />
                   附件与格式化处理
                 </div>
                 <ul className="list-disc list-inside space-y-1.5 text-gray-600 pl-1">
@@ -709,15 +716,15 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
               </div>
 
               {/* Card: Regex username matching rules helper */}
-              <div className="bg-gray-50 border border-gray-150 rounded-xl p-5 space-y-3">
+              <div className="bg-gray-50 border border-gray-150 rounded p-5 space-y-3">
                 <div className="font-bold text-gray-800 text-sm flex items-center gap-1.5">
-                  <Link className="h-4.5 w-4.5 text-indigo-600" />
+                  <Link className="h-4.5 w-4.5 text-gray-600" />
                   正则表达式用户名匹配规则
                 </div>
                 <p className="text-gray-600">
                   系统采用标准的<strong>正则表达式（Regular Expression）</strong>对邮箱的用户名（即 <code>@</code> 前面的部分）进行匹配。配置时请<strong>无需</strong>手动输入头尾的 <code>^</code> 和 <code>$</code> 符号（系统在校验匹配时已自动包含）。以下是一些常用的匹配配置方式与典型例子：
                 </p>
-                <div className="border border-gray-200 rounded-xl overflow-hidden mt-2">
+                <div className="border border-gray-200 rounded overflow-hidden mt-2">
                   <table className="min-w-full divide-y divide-gray-200 text-left">
                     <thead className="bg-gray-100 font-semibold text-gray-800">
                       <tr>
@@ -728,7 +735,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                     </thead>
                     <tbody className="divide-y divide-gray-150 bg-white font-mono text-[11px] text-gray-600">
                       <tr>
-                        <td className="px-4 py-2 text-indigo-600 font-semibold">jot_.*</td>
+                        <td className="px-4 py-2 text-gray-600 font-semibold">jot_.*</td>
                         <td className="px-4 py-2 text-gray-700 font-sans">以 <code>jot_</code> 开头的任意名字</td>
                         <td className="px-4 py-2 text-gray-700 font-sans">
                           ✅ 匹配：<code>jot_abc</code>、<code>jot_123</code>、<code>jot_</code><br/>
@@ -736,7 +743,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                         </td>
                       </tr>
                       <tr>
-                        <td className="px-4 py-2 text-indigo-600 font-semibold">jot_..*</td>
+                        <td className="px-4 py-2 text-gray-600 font-semibold">jot_..*</td>
                         <td className="px-4 py-2 text-gray-700 font-sans">以 <code>jot_</code> 开头且后面<strong>至少有一个字符</strong></td>
                         <td className="px-4 py-2 text-gray-700 font-sans">
                           ✅ 匹配：<code>jot_a</code>、<code>jot_123</code><br/>
@@ -744,7 +751,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                         </td>
                       </tr>
                       <tr>
-                        <td className="px-4 py-2 text-indigo-600 font-semibold">u\..*</td>
+                        <td className="px-4 py-2 text-gray-600 font-semibold">u\..*</td>
                         <td className="px-4 py-2 text-gray-700 font-sans">以 <code>u.</code> 开头的任意名字</td>
                         <td className="px-4 py-2 text-gray-700 font-sans">
                           <em>注：点号 <code>.</code> 在正则中需写为 <code>\.</code> 进行转义。</em><br/>
@@ -753,7 +760,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                         </td>
                       </tr>
                       <tr>
-                        <td className="px-4 py-2 text-indigo-600 font-semibold">test</td>
+                        <td className="px-4 py-2 text-gray-600 font-semibold">test</td>
                         <td className="px-4 py-2 text-gray-700 font-sans">精确匹配 <code>test</code></td>
                         <td className="px-4 py-2 text-gray-700 font-sans">
                           ✅ 匹配：<code>test</code><br/>
@@ -761,7 +768,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                         </td>
                       </tr>
                       <tr>
-                        <td className="px-4 py-2 text-indigo-600 font-semibold">.*</td>
+                        <td className="px-4 py-2 text-gray-600 font-semibold">.*</td>
                         <td className="px-4 py-2 text-gray-700 font-sans">匹配任意名字（通配所有）</td>
                         <td className="px-4 py-2 text-gray-700 font-sans">
                           ✅ 匹配：任何邮箱用户名前缀
@@ -773,14 +780,14 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
               </div>
 
               {/* Card 3: Webhook Parameters */}
-              <div className="bg-gray-50 border border-gray-150 rounded-xl p-5 space-y-3">
+              <div className="bg-gray-50 border border-gray-150 rounded p-5 space-y-3">
                 <div className="font-bold text-gray-800 text-sm flex items-center gap-1.5">
-                  <Server className="h-4.5 w-4.5 text-indigo-600" />
+                  <Server className="h-4.5 w-4.5 text-gray-600" />
                   Webhook 接口投递参数与数据格式
                 </div>
                 <p className="text-gray-600">当收信规则匹配到 API Webhook 转发时，本系统会向您配置的 Webhook URL 发送 <strong>POST</strong> 请求，内容为 <code>application/json</code> 格式。投递字段列表如下：</p>
                 
-                <div className="border border-gray-200 rounded-xl overflow-hidden mt-2">
+                <div className="border border-gray-200 rounded overflow-hidden mt-2">
                   <table className="min-w-full divide-y divide-gray-200 text-left">
                     <thead className="bg-gray-100 font-semibold text-gray-800">
                       <tr>
@@ -791,32 +798,32 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                     </thead>
                     <tbody className="divide-y divide-gray-150 bg-white font-mono text-[11px] text-gray-600">
                       <tr>
-                        <td className="px-4 py-2 text-indigo-600 font-semibold">to</td>
+                        <td className="px-4 py-2 text-gray-600 font-semibold">to</td>
                         <td className="px-4 py-2 text-gray-500">string</td>
                         <td className="px-4 py-2 text-gray-700 font-sans">收件人电子邮箱地址（例如：<code>u.test@yourdomain.com</code>）</td>
                       </tr>
                       <tr>
-                        <td className="px-4 py-2 text-indigo-600 font-semibold">from</td>
+                        <td className="px-4 py-2 text-gray-600 font-semibold">from</td>
                         <td className="px-4 py-2 text-gray-500">string</td>
                         <td className="px-4 py-2 text-gray-700 font-sans">发件人电子邮箱地址</td>
                       </tr>
                       <tr>
-                        <td className="px-4 py-2 text-indigo-600 font-semibold">subject</td>
+                        <td className="px-4 py-2 text-gray-600 font-semibold">subject</td>
                         <td className="px-4 py-2 text-gray-500">string</td>
                         <td className="px-4 py-2 text-gray-700 font-sans">邮件主题。如果邮件没有主题，则为空字符串。</td>
                       </tr>
                       <tr>
-                        <td className="px-4 py-2 text-indigo-600 font-semibold">text</td>
+                        <td className="px-4 py-2 text-gray-600 font-semibold">text</td>
                         <td className="px-4 py-2 text-gray-500">string</td>
                         <td className="px-4 py-2 text-gray-700 font-sans">邮件纯文本内容。若只包含 HTML，系统会自动过滤剥离 HTML 标签后返回纯文本主体。</td>
                       </tr>
                       <tr>
-                        <td className="px-4 py-2 text-indigo-600 font-semibold">rawSize</td>
+                        <td className="px-4 py-2 text-gray-600 font-semibold">rawSize</td>
                         <td className="px-4 py-2 text-gray-500">number</td>
                         <td className="px-4 py-2 text-gray-700 font-sans">原始邮件大小（单位：字节 Byte）</td>
                       </tr>
                       <tr>
-                        <td className="px-4 py-2 text-indigo-600 font-semibold">attachments</td>
+                        <td className="px-4 py-2 text-gray-600 font-semibold">attachments</td>
                         <td className="px-4 py-2 text-gray-500">array</td>
                         <td className="px-4 py-2 text-gray-700 font-sans">
                           附件对象数组（若配置了 R2）。每个附件结构：<code>{"{ filename: string, mimeType: string, size: number, url: string }"}</code>。
@@ -837,7 +844,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                 <p className="text-xs text-gray-500 mt-1">配置支持接收邮件的域名，每个用户允许添加的最多个数受系统管理员限制。</p>
               </div>
 
-              <div className="bg-amber-50 border border-amber-100 text-amber-800 rounded-xl p-4 text-xs flex gap-2 select-none leading-relaxed">
+              <div className="bg-amber-50 border border-amber-100 text-amber-800 rounded p-4 text-xs flex gap-2 select-none leading-relaxed">
                 <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                 <div>
                   <strong>配置提醒</strong>：在添加这些域名之前，您必须在 Cloudflare 的 <strong>Email Routing</strong> 设置中开启 <strong>Catch-all address</strong> 规则，并将接收方设为我们部署的这个 <strong>jotify-email-workers</strong>。
@@ -851,20 +858,20 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                   disabled={isAddingDomain}
                   value={newDomain}
                   onChange={e => setNewDomain(e.target.value)}
-                  className="flex-1 text-xs px-3.5 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                  className="flex-1 text-xs px-3.5 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
                   placeholder="e.g. zwq.me"
                 />
                 <button
                   type="submit"
                   disabled={isAddingDomain}
-                  className="px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 flex items-center gap-1 cursor-pointer shrink-0 transition-colors disabled:opacity-50"
+                  className="px-4 py-2 bg-black text-white text-xs font-semibold rounded hover:bg-gray-800 flex items-center gap-1 cursor-pointer shrink-0 transition-colors disabled:opacity-50"
                 >
                   <Plus className="h-4 w-4" />
                   {isAddingDomain ? '添加中...' : '添加域名'}
                 </button>
               </form>
 
-              <div className="border border-gray-100 rounded-xl overflow-hidden">
+              <div className="border border-gray-100 rounded overflow-hidden">
                 <table className="min-w-full divide-y divide-gray-100 text-xs">
                   <thead className="bg-gray-50 font-semibold text-gray-700">
                     <tr>
@@ -920,20 +927,20 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                   disabled={isAddingDestination}
                   value={newDestination}
                   onChange={e => setNewDestination(e.target.value)}
-                  className="flex-1 text-xs px-3.5 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                  className="flex-1 text-xs px-3.5 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
                   placeholder="e.g. my-private-email@gmail.com"
                 />
                 <button
                   type="submit"
                   disabled={isAddingDestination}
-                  className="px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 flex items-center gap-1 cursor-pointer shrink-0 transition-colors disabled:opacity-50"
+                  className="px-4 py-2 bg-black text-white text-xs font-semibold rounded hover:bg-gray-800 flex items-center gap-1 cursor-pointer shrink-0 transition-colors disabled:opacity-50"
                 >
                   <Plus className="h-4 w-4" />
                   {isAddingDestination ? '添加中...' : '添加目标'}
                 </button>
               </form>
 
-              <div className="border border-gray-100 rounded-xl overflow-hidden">
+              <div className="border border-gray-100 rounded overflow-hidden">
                 <table className="min-w-full divide-y divide-gray-100 text-xs">
                   <thead className="bg-gray-50 font-semibold text-gray-700">
                     <tr>
@@ -984,14 +991,14 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                 </div>
                 <button
                   onClick={() => openForwardRuleModal(null)}
-                  className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1 cursor-pointer transition-colors shadow-xs"
+                  className="px-3.5 py-1.5 bg-black hover:bg-gray-800 text-white text-xs font-semibold rounded flex items-center gap-1 cursor-pointer transition-colors "
                 >
                   <Plus className="h-4 w-4" />
                   新建转发规则
                 </button>
               </div>
 
-              <div className="border border-gray-100 rounded-xl overflow-hidden">
+              <div className="border border-gray-100 rounded overflow-hidden">
                 <table className="min-w-full divide-y divide-gray-100 text-xs">
                   <thead className="bg-gray-50 font-semibold text-gray-700">
                     <tr>
@@ -1009,13 +1016,13 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                         const displayDomain = r.subdomain ? `${r.subdomain}.${d?.domain || ''}` : (d?.domain || '');
                         return (
                           <tr key={r.id} className="hover:bg-gray-50/50">
-                            <td className="px-4 py-3 font-mono font-semibold text-indigo-700">^{r.usernamePattern}$</td>
+                            <td className="px-4 py-3 font-mono font-semibold text-black">^{r.usernamePattern}$</td>
                             <td className="px-4 py-3 font-mono text-gray-500">@{displayDomain}</td>
                             <td className="px-4 py-3 font-mono font-medium">{dest?.email}</td>
                             <td className="px-4 py-3 text-right space-x-2">
                               <button
                                 onClick={() => openForwardRuleModal(r)}
-                                className="text-gray-500 hover:text-indigo-600 cursor-pointer"
+                                className="text-gray-500 hover:text-gray-600 cursor-pointer"
                                 title="编辑"
                               >
                                 <Edit className="h-4 w-4 inline" />
@@ -1057,14 +1064,14 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                 </div>
                 <button
                   onClick={() => openWebhookModal(null)}
-                  className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1 cursor-pointer transition-colors shadow-xs"
+                  className="px-3.5 py-1.5 bg-black hover:bg-gray-800 text-white text-xs font-semibold rounded flex items-center gap-1 cursor-pointer transition-colors "
                 >
                   <Plus className="h-4 w-4" />
                   新建 Webhook
                 </button>
               </div>
 
-              <div className="border border-gray-100 rounded-xl overflow-hidden">
+              <div className="border border-gray-100 rounded overflow-hidden">
                 <table className="min-w-full divide-y divide-gray-100 text-xs">
                   <thead className="bg-gray-50 font-semibold text-gray-700">
                     <tr>
@@ -1087,7 +1094,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                           <td className="px-4 py-3 text-right space-x-2">
                             <button
                               onClick={() => openWebhookModal(w)}
-                              className="text-gray-500 hover:text-indigo-600 cursor-pointer"
+                              className="text-gray-500 hover:text-gray-600 cursor-pointer"
                               title="编辑"
                             >
                               <Edit className="h-4 w-4 inline" />
@@ -1128,14 +1135,14 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                 </div>
                 <button
                   onClick={() => openWebhookRuleModal(null)}
-                  className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1 cursor-pointer transition-colors shadow-xs"
+                  className="px-3.5 py-1.5 bg-black hover:bg-gray-800 text-white text-xs font-semibold rounded flex items-center gap-1 cursor-pointer transition-colors "
                 >
                   <Plus className="h-4 w-4" />
                   新建 API 规则
                 </button>
               </div>
 
-              <div className="border border-gray-100 rounded-xl overflow-hidden">
+              <div className="border border-gray-100 rounded overflow-hidden">
                 <table className="min-w-full divide-y divide-gray-100 text-xs">
                   <thead className="bg-gray-50 font-semibold text-gray-700">
                     <tr>
@@ -1153,13 +1160,13 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                         const displayDomain = r.subdomain ? `${r.subdomain}.${d?.domain || ''}` : (d?.domain || '');
                         return (
                           <tr key={r.id} className="hover:bg-gray-50/50">
-                            <td className="px-4 py-3 font-mono font-semibold text-indigo-700">^{r.usernamePattern}$</td>
+                            <td className="px-4 py-3 font-mono font-semibold text-black">^{r.usernamePattern}$</td>
                             <td className="px-4 py-3 font-mono text-gray-500">@{displayDomain}</td>
                             <td className="px-4 py-3 font-semibold text-gray-800">{w?.name}</td>
                             <td className="px-4 py-3 text-right space-x-2">
                               <button
                                 onClick={() => openWebhookRuleModal(r)}
-                                className="text-gray-500 hover:text-indigo-600 cursor-pointer"
+                                className="text-gray-500 hover:text-gray-600 cursor-pointer"
                                 title="编辑"
                               >
                                 <Edit className="h-4 w-4 inline" />
@@ -1199,7 +1206,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                 <p className="text-xs text-gray-500 mt-1">审核新用户的注册申请，拒绝或通过激活账号。</p>
               </div>
 
-              <div className="border border-gray-100 rounded-xl overflow-hidden">
+              <div className="border border-gray-100 rounded overflow-hidden">
                 <table className="min-w-full divide-y divide-gray-100 text-xs">
                   <thead className="bg-gray-50 font-semibold text-gray-700">
                     <tr>
@@ -1271,7 +1278,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                 <p className="text-xs text-gray-500 mt-1">添加系统管理员或注销用户账号。</p>
               </div>
 
-              <form onSubmit={addAdmin} className="bg-gray-50/50 border border-gray-150 rounded-xl p-4 space-y-4 text-xs text-gray-700">
+              <form onSubmit={addAdmin} className="bg-gray-50/50 border border-gray-150 rounded p-4 space-y-4 text-xs text-gray-700">
                 <div className="font-semibold text-gray-800">新增管理员账号 (Create Admin)</div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -1283,7 +1290,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                       disabled={adminSaving}
                       value={newAdminName}
                       onChange={e => setNewAdminName(e.target.value)}
-                      className="w-full text-xs px-3 py-1.5 bg-white border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                      className="w-full text-xs px-3 py-1.5 bg-white border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
                       placeholder="e.g. Sub Admin"
                     />
                   </div>
@@ -1296,7 +1303,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                       disabled={adminSaving}
                       value={newAdminEmail}
                       onChange={e => setNewAdminEmail(e.target.value)}
-                      className="w-full text-xs px-3 py-1.5 bg-white border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                      className="w-full text-xs px-3 py-1.5 bg-white border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
                       placeholder="name@domain.com"
                     />
                   </div>
@@ -1309,7 +1316,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                       disabled={adminSaving}
                       value={newAdminPassword}
                       onChange={e => setNewAdminPassword(e.target.value)}
-                      className="w-full text-xs px-3 py-1.5 bg-white border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                      className="w-full text-xs px-3 py-1.5 bg-white border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
                       placeholder="******"
                     />
                   </div>
@@ -1318,13 +1325,13 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                 <button
                   type="submit"
                   disabled={adminSaving}
-                  className="px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors cursor-pointer disabled:opacity-50"
+                  className="px-4 py-2 bg-black text-white text-xs font-semibold rounded hover:bg-gray-800 transition-colors cursor-pointer disabled:opacity-50"
                 >
                   {adminSaving ? '正在创建...' : '创建管理员'}
                 </button>
               </form>
 
-              <div className="border border-gray-100 rounded-xl overflow-hidden">
+              <div className="border border-gray-100 rounded overflow-hidden">
                 <table className="min-w-full divide-y divide-gray-100 text-xs">
                   <thead className="bg-gray-50 font-semibold text-gray-700">
                     <tr>
@@ -1341,7 +1348,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                         <tr key={u.id} className="hover:bg-gray-50/50">
                           <td className="px-4 py-3 font-semibold">{u.name}</td>
                           <td className="px-4 py-3 font-mono">{u.email}</td>
-                          <td className="px-4 py-3 font-mono font-semibold text-indigo-700">{u.role}</td>
+                          <td className="px-4 py-3 font-mono font-semibold text-black">{u.role}</td>
                           <td className="px-4 py-3 font-mono">{u.status}</td>
                           <td className="px-4 py-3 text-right">
                             {u.role !== 'superadmin' && (
@@ -1377,10 +1384,10 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
       {/* ── WEBHOOK ADD/EDIT MODAL ── */}
       {webhookModalOpen && (
         <div className="fixed inset-0 z-50 bg-gray-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white border border-gray-100 shadow-xl rounded-xl p-6 max-w-md w-full space-y-4">
+          <div className="bg-white border border-gray-100 shadow-xl rounded p-6 max-w-md w-full space-y-4">
             <div className="flex justify-between items-center">
               <h4 className="text-sm font-bold text-gray-900 font-serif flex items-center gap-1.5">
-                <Server className="h-4.5 w-4.5 text-indigo-600" />
+                <Server className="h-4.5 w-4.5 text-gray-600" />
                 {editingWebhook ? '修改 Webhook 接口' : '新增 Webhook 接口'}
               </h4>
               <button
@@ -1400,7 +1407,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                   disabled={webhookSaving}
                   value={webhookName}
                   onChange={e => setWebhookName(e.target.value)}
-                  className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                  className="w-full text-xs px-3 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
                   placeholder="e.g. 我的飞书机器人"
                 />
               </div>
@@ -1413,7 +1420,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                   disabled={webhookSaving}
                   value={webhookUrl}
                   onChange={e => setWebhookUrl(e.target.value)}
-                  className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                  className="w-full text-xs px-3 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
                   placeholder="https://..."
                 />
               </div>
@@ -1425,7 +1432,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                     value={webhookAuthType}
                     disabled={webhookSaving}
                     onChange={e => setWebhookAuthType(e.target.value)}
-                    className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                    className="w-full text-xs px-3 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
                   >
                     <option value="none">无 (None)</option>
                     <option value="bearer">Bearer Token</option>
@@ -1440,7 +1447,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                     value={webhookAuthToken}
                     onChange={e => setWebhookAuthToken(e.target.value)}
                     disabled={webhookAuthType === 'none' || webhookSaving}
-                    className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                    className="w-full text-xs px-3 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
                     placeholder={webhookAuthType === 'header' ? 'X-Secret: my_value' : 'Enter secret token'}
                   />
                 </div>
@@ -1451,14 +1458,14 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                   type="button"
                   disabled={webhookSaving}
                   onClick={() => setWebhookModalOpen(false)}
-                  className="px-4 py-2 border border-gray-300 hover:bg-gray-50 font-semibold rounded-lg cursor-pointer disabled:opacity-50"
+                  className="px-4 py-2 border border-gray-200 hover:bg-gray-50 font-semibold rounded cursor-pointer disabled:opacity-50"
                 >
                   取消
                 </button>
                 <button
                   type="submit"
                   disabled={webhookSaving}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                  className="px-4 py-2 bg-black hover:bg-gray-800 text-white font-semibold rounded cursor-pointer disabled:opacity-50 flex items-center gap-1"
                 >
                   {webhookSaving ? '保存中...' : '确认保存'}
                 </button>
@@ -1471,10 +1478,10 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
       {/* ── FORWARD RULE ADD/EDIT MODAL ── */}
       {forwardRuleModalOpen && (
         <div className="fixed inset-0 z-50 bg-gray-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white border border-gray-100 shadow-xl rounded-xl p-6 max-w-md w-full space-y-4">
+          <div className="bg-white border border-gray-100 shadow-xl rounded p-6 max-w-md w-full space-y-4">
             <div className="flex justify-between items-center">
               <h4 className="text-sm font-bold text-gray-900 font-serif flex items-center gap-1.5">
-                <Link className="h-4.5 w-4.5 text-indigo-600" />
+                <Link className="h-4.5 w-4.5 text-gray-600" />
                 {editingForwardRule ? '修改邮件转发规则' : '新增邮件转发规则'}
               </h4>
               <button
@@ -1495,7 +1502,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                     disabled={forwardRuleSaving}
                     value={rulePattern}
                     onChange={e => setRulePattern(e.target.value)}
-                    className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                    className="w-full text-xs px-3 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
                     placeholder="e.g. u.* 或 co"
                   />
                 </div>
@@ -1507,7 +1514,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                     disabled={forwardRuleSaving}
                     value={ruleSubdomain}
                     onChange={e => setRuleSubdomain(e.target.value)}
-                    className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                    className="w-full text-xs px-3 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
                     placeholder="e.g. mail"
                   />
                 </div>
@@ -1521,7 +1528,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                     value={ruleDomainId}
                     disabled={forwardRuleSaving}
                     onChange={e => setRuleDomainId(e.target.value)}
-                    className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50 font-mono"
+                    className="w-full text-xs px-3 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50 font-mono"
                   >
                     <option value="">-- 选择域名 --</option>
                     {domains.map(d => (
@@ -1537,7 +1544,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                     value={ruleDestId}
                     disabled={forwardRuleSaving}
                     onChange={e => setRuleDestId(e.target.value)}
-                    className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50 font-mono"
+                    className="w-full text-xs px-3 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50 font-mono"
                   >
                     <option value="">-- 选择转发目标 --</option>
                     {destinations.map(dest => (
@@ -1552,14 +1559,14 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                   type="button"
                   disabled={forwardRuleSaving}
                   onClick={() => setForwardRuleModalOpen(false)}
-                  className="px-4 py-2 border border-gray-300 hover:bg-gray-50 font-semibold rounded-lg cursor-pointer disabled:opacity-50"
+                  className="px-4 py-2 border border-gray-200 hover:bg-gray-50 font-semibold rounded cursor-pointer disabled:opacity-50"
                 >
                   取消
                 </button>
                 <button
                   type="submit"
                   disabled={forwardRuleSaving}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                  className="px-4 py-2 bg-black hover:bg-gray-800 text-white font-semibold rounded cursor-pointer disabled:opacity-50 flex items-center gap-1"
                 >
                   {forwardRuleSaving ? '保存中...' : '确认保存'}
                 </button>
@@ -1572,10 +1579,10 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
       {/* ── WEBHOOK RULE ADD/EDIT MODAL ── */}
       {webhookRuleModalOpen && (
         <div className="fixed inset-0 z-50 bg-gray-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white border border-gray-100 shadow-xl rounded-xl p-6 max-w-md w-full space-y-4">
+          <div className="bg-white border border-gray-100 shadow-xl rounded p-6 max-w-md w-full space-y-4">
             <div className="flex justify-between items-center">
               <h4 className="text-sm font-bold text-gray-900 font-serif flex items-center gap-1.5">
-                <Link className="h-4.5 w-4.5 text-indigo-600" />
+                <Link className="h-4.5 w-4.5 text-gray-600" />
                 {editingWebhookRule ? '修改 API 集成规则' : '新增 API 集成规则'}
               </h4>
               <button
@@ -1596,7 +1603,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                     disabled={webhookRuleSaving}
                     value={webhookRulePattern}
                     onChange={e => setWebhookRulePattern(e.target.value)}
-                    className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                    className="w-full text-xs px-3 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
                     placeholder="e.g. jot_* 或 .+"
                   />
                 </div>
@@ -1608,7 +1615,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                     disabled={webhookRuleSaving}
                     value={webhookRuleSubdomain}
                     onChange={e => setWebhookRuleSubdomain(e.target.value)}
-                    className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                    className="w-full text-xs px-3 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
                     placeholder="e.g. mail"
                   />
                 </div>
@@ -1622,7 +1629,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                     value={webhookRuleDomainId}
                     disabled={webhookRuleSaving}
                     onChange={e => setWebhookRuleDomainId(e.target.value)}
-                    className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50 font-mono"
+                    className="w-full text-xs px-3 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50 font-mono"
                   >
                     <option value="">-- 选择域名 --</option>
                     {domains.map(d => (
@@ -1638,7 +1645,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                     value={webhookRuleWebhookId}
                     disabled={webhookRuleSaving}
                     onChange={e => setWebhookRuleWebhookId(e.target.value)}
-                    className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50 font-mono"
+                    className="w-full text-xs px-3 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50 font-mono"
                   >
                     <option value="">-- 选择 Webhook --</option>
                     {webhooks.map(w => (
@@ -1653,14 +1660,14 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                   type="button"
                   disabled={webhookRuleSaving}
                   onClick={() => setWebhookRuleModalOpen(false)}
-                  className="px-4 py-2 border border-gray-300 hover:bg-gray-50 font-semibold rounded-lg cursor-pointer disabled:opacity-50"
+                  className="px-4 py-2 border border-gray-200 hover:bg-gray-50 font-semibold rounded cursor-pointer disabled:opacity-50"
                 >
                   取消
                 </button>
                 <button
                   type="submit"
                   disabled={webhookRuleSaving}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                  className="px-4 py-2 bg-black hover:bg-gray-800 text-white font-semibold rounded cursor-pointer disabled:opacity-50 flex items-center gap-1"
                 >
                   {webhookRuleSaving ? '保存中...' : '确认保存'}
                 </button>
@@ -1673,9 +1680,9 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
       {/* Change password modal */}
       {showPasswordModal && (
         <div className="fixed inset-0 z-50 bg-gray-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white border border-gray-100 shadow-xl rounded-xl p-6 max-w-sm w-full space-y-4">
+          <div className="bg-white border border-gray-100 shadow-xl rounded p-6 max-w-sm w-full space-y-4">
             <h4 className="text-sm font-bold text-gray-900 font-serif flex items-center gap-1.5">
-              <Key className="h-4 w-4 text-indigo-600" />
+              <Key className="h-4 w-4 text-gray-600" />
               修改账户密码
             </h4>
             <form onSubmit={handlePasswordChange} className="space-y-4">
@@ -1687,7 +1694,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                   disabled={isChangingPassword}
                   value={newPassword}
                   onChange={e => setNewPassword(e.target.value)}
-                  className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                  className="w-full text-xs px-3 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
                   placeholder="最少 6 位"
                 />
               </div>
@@ -1697,14 +1704,14 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                   type="button"
                   disabled={isChangingPassword}
                   onClick={() => { setShowPasswordModal(false); setNewPassword(''); }}
-                  className="px-3.5 py-1.5 border border-gray-300 hover:bg-gray-50 font-semibold rounded-lg cursor-pointer disabled:opacity-50"
+                  className="px-3.5 py-1.5 border border-gray-200 hover:bg-gray-50 font-semibold rounded cursor-pointer disabled:opacity-50"
                 >
                   取消
                 </button>
                 <button
                   type="submit"
                   disabled={isChangingPassword}
-                  className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg cursor-pointer disabled:opacity-50"
+                  className="px-3.5 py-1.5 bg-black hover:bg-gray-800 text-white font-semibold rounded cursor-pointer disabled:opacity-50"
                 >
                   {isChangingPassword ? '修改中...' : '确认修改'}
                 </button>
