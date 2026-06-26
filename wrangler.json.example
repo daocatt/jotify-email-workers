@@ -23,13 +23,28 @@
     }
   ],
   "workers_dev": false,
-  "triggers": {
-    "crons": [
-      "*/5 * * * *"
-    ]
-  },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS"
+  },
+  "queues": {
+    "producers": [
+      {
+        "binding": "RETRY_QUEUE",
+        "queue": "jotify-email-retry"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "jotify-email-retry",
+        "max_batch_size": 10,
+        "max_retries": 17,
+        "dead_letter_queue": "jotify-email-dlq"
+      },
+      {
+        "queue": "jotify-email-dlq",
+        "max_retries": 0
+      }
+    ]
   }
 }
