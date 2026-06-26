@@ -7,6 +7,13 @@ import { getAuth } from './auth';
 import { getDb } from './db';
 import PostalMime from 'postal-mime';
 import { hashPassword } from 'better-auth/crypto';
+import {
+  deliverWebhookWithRetry,
+  enqueueRetry,
+  backoffSeconds,
+  deliverOnce,
+  RetryMessage,
+} from './retry';
 
 // ── Bindings and Hono Types ──────────────────────────────────────────────────
 
@@ -26,6 +33,7 @@ interface Bindings {
   TURNSTILE_SECRET_KEY?: string;
   ATTACHMENT_BUCKET?: R2Bucket;
   R2_PUBLIC_URL?: string;
+  RETRY_QUEUE: Queue<RetryMessage>;
 }
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -88,61 +96,14 @@ async function verifyTurnstile(token: string | undefined, secretKey: string | un
   }
 }
 
-async function deliverWebhookWithRetry(
-  url: string, 
-  headers: Record<string, string>, 
-  payload: any, 
-  retries = 2, 
-  timeoutMs = 15000,
-  dbParams?: { db: any; userId: string; webhookId: number }
-): Promise<boolean> {
-  let attempt = 0;
-  while (attempt <= retries) {
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeoutMs);
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
-      clearTimeout(id);
-      if (res.ok) {
-        console.log(`[Email Worker] Webhook delivered successfully to ${url} (status: ${res.status}, attempt: ${attempt + 1})`);
-        return true;
-      }
-      console.warn(`[Email Worker] Webhook returned status ${res.status} from ${url} (attempt: ${attempt + 1}/${retries + 1})`);
-    } catch (err: any) {
-      clearTimeout(id);
-      console.error(`[Email Worker] Webhook attempt ${attempt + 1} failed for ${url}:`, err.message || err);
-    }
-    attempt++;
-    if (attempt <= retries) {
-      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-    }
-  }
-  console.error(`[Email Worker] Webhook delivery failed after ${retries + 1} attempts for ${url}`);
+// ── Helper: simple MD5 hash (used for inbound dedup key when no Message-ID) ──
 
-  if (dbParams) {
-    try {
-      console.log(`[Email Worker] Persisting failed webhook for URL: ${url} to D1...`);
-      await dbParams.db.insert(schema.failedWebhooks).values({
-        userId: dbParams.userId,
-        webhookId: dbParams.webhookId,
-        url,
-        headers: JSON.stringify(headers),
-        payload: JSON.stringify(payload),
-        attempts: attempt, // Save initial attempts count
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-      console.log(`[Email Worker] Failed webhook successfully persisted.`);
-    } catch (err: any) {
-      console.error(`[Email Worker] Failed to persist failed webhook:`, err.message || err);
-    }
-  }
-  return false;
+async function md5(input: string): Promise<string> {
+  const data = new TextEncoder().encode(input);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  // Take first 16 bytes (32 hex chars) to approximate MD5 length
+  return hashArray.slice(0, 16).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 // ── Superadmin Autoseeding Middleware ────────────────────────────────────────
@@ -261,11 +222,13 @@ app.post('/api/public/send-code', async (c) => {
   try {
     const fromName = c.env.RESEND_FROM_NAME || 'Jotify Mailer';
     const fromEmail = c.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+    const resendIdempotencyKey = `jotify/code/${email}/${Date.now()}`;
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${c.env.RESEND_API_KEY}`,
         'Content-Type': 'application/json',
+        'Idempotency-Key': resendIdempotencyKey,
       },
       body: JSON.stringify({
         from: `${fromName} <${fromEmail}>`,
@@ -1014,6 +977,28 @@ export default {
       return;
     }
 
+    // 1.5 Inbound idempotency: dedup Cloudflare re-delivery of the same message
+    const messageId = message.headers?.get?.('message-id')?.trim() || '';
+    const dateHeader = message.headers?.get?.('date')?.trim() || '';
+    const dedupKey = messageId
+      ? `mid:${messageId}`
+      : `h:${await md5(`${from}|${to}|${dateHeader}`)}`;
+    try {
+      const inserted = await env.DB.prepare(`
+        INSERT OR IGNORE INTO delivery_idempotency (idempotency_key, status, created_at) VALUES (?, 'sent', ?)
+      `).bind(dedupKey, new Date().toISOString()).run();
+      if (!inserted?.meta?.changes) {
+        console.log(`[Email Worker] Duplicate inbound message ${dedupKey}, already processed. Skipping.`);
+        return;
+      }
+    } catch (err: any) {
+      // Table may not exist yet — log and continue (non-fatal)
+      console.warn(`[Email Worker] Idempotency check failed: ${err.message}. Continuing.`);
+    }
+
+    // Stable per-inbound-message identifier for webhook receiver-side dedupe
+    const deliveryUuid = crypto.randomUUID();
+
     const username = to.split('@')[0];
 
     // 2. Match forwarding rules (regex)
@@ -1104,12 +1089,13 @@ export default {
               attachmentUrls.push({
                 filename: att.filename || 'unnamed',
                 mimeType: att.mimeType || 'application/octet-stream',
-                size: att.content.byteLength,
+                size: typeof att.content === 'string' ? att.content.length : (att.content as ArrayBuffer).byteLength,
                 url: publicUrl
               });
             }
           }
 
+          const webhookIdempotencyKey = `jotify/webhook/${w.webhook.id}/${deliveryUuid}`;
           const payload = {
             to: to,
             from: from,
@@ -1117,6 +1103,7 @@ export default {
             text,
             rawSize: message.rawSize,
             attachments: attachmentUrls,
+            delivery_id: webhookIdempotencyKey, // Receiver-side dedupe key
           };
 
           const headers: Record<string, string> = {
@@ -1133,16 +1120,21 @@ export default {
             }
           }
 
-          ctx.waitUntil(
-            deliverWebhookWithRetry(
-              w.webhook.url, 
-              headers, 
-              payload, 
-              2, 
-              15000, 
-              { db, userId: domainMatched.userId, webhookId: w.webhook.id }
-            )
-          );
+          ctx.waitUntil((async () => {
+            const success = await deliverWebhookWithRetry(w.webhook.url, headers, payload, 2, 15000);
+            if (!success) {
+              // Inline retries exhausted — enqueue for async retry via Queues
+              try {
+                await enqueueRetry(env, {
+                  kind: 'webhook',
+                  idempotencyKey: webhookIdempotencyKey,
+                  payload: { url: w.webhook.url, headers, body: payload },
+                });
+              } catch (enqueueErr: any) {
+                console.error(`[Email Worker] Failed to enqueue retry for ${w.webhook.url}:`, enqueueErr.message || enqueueErr);
+              }
+            }
+          })());
 
           webhookMatched = true;
         }
@@ -1159,80 +1151,26 @@ export default {
     message.setReject('Address not allowed');
   },
 
-  // Cloudflare Scheduled Cron Trigger Handler
-  async scheduled(event: any, env: Bindings, ctx: ExecutionContext): Promise<void> {
-    console.log(`[Scheduled Worker] Running cron trigger to retry failed webhooks...`);
-    const db = getDb(env.DB);
-    const now = new Date();
-
-    try {
-      // Fetch up to 30 failed webhooks to avoid hitting Cloudflare subrequest limits (max 50 per invocation)
-      const failedList = await db.select().from(schema.failedWebhooks).limit(30);
-
-      for (const record of failedList) {
-        const createdAt = new Date(record.createdAt);
-        const updatedAt = new Date(record.updatedAt);
-        const timeSinceCreated = now.getTime() - createdAt.getTime();
-        const timeSinceUpdated = now.getTime() - updatedAt.getTime();
-
-        // 1. Check if expired (24 hours = 86,400,000 ms) or maximum attempts reached (20)
-        if (record.attempts >= 20 || timeSinceCreated >= 24 * 60 * 60 * 1000) {
-          console.warn(`[Scheduled Worker] Webhook ID ${record.id} has failed ${record.attempts} times or exceeded 24 hours. Deleting and discarding (dead-letter).`);
-          await db.delete(schema.failedWebhooks).where(eq(schema.failedWebhooks.id, record.id));
-          continue;
-        }
-
-        // 2. Determine if it is eligible for retry based on paced delay:
-        let isEligible = false;
-        if (record.attempts < 10) {
-          // First 10 times: retry every 5 minutes (300,000 ms)
-          isEligible = timeSinceUpdated >= 5 * 60 * 1000;
-        } else if (record.attempts < 15) {
-          // 10-15 times: retry every 1 hour (3,600,000 ms)
-          isEligible = timeSinceUpdated >= 60 * 60 * 1000;
-        } else {
-          // 15-20 times: retry every 3 hours (10,800,000 ms)
-          isEligible = timeSinceUpdated >= 3 * 60 * 60 * 1000;
-        }
-
-        if (!isEligible) {
-          continue;
-        }
-
-        // 3. Perform retry inside waitUntil context
-        console.log(`[Scheduled Worker] Retrying Webhook ID ${record.id} (Attempt: ${record.attempts + 1}, URL: ${record.url})...`);
-
-        ctx.waitUntil((async () => {
-          let headers: Record<string, string> = {};
-          let payload: any = {};
-          try {
-            headers = JSON.parse(record.headers);
-            payload = JSON.parse(record.payload);
-          } catch (err) {
-            console.error(`[Scheduled Worker] Failed to parse headers or payload for record ID ${record.id}. Deleting record.`);
-            await db.delete(schema.failedWebhooks).where(eq(schema.failedWebhooks.id, record.id));
-            return;
-          }
-
-          // Single attempt (retries = 0)
-          const success = await deliverWebhookWithRetry(record.url, headers, payload, 0, 15000);
-          if (success) {
-            console.log(`[Scheduled Worker] Webhook ID ${record.id} delivered successfully on retry. Deleting record.`);
-            await db.delete(schema.failedWebhooks).where(eq(schema.failedWebhooks.id, record.id));
-          } else {
-            const nextAttempts = record.attempts + 1;
-            console.warn(`[Scheduled Worker] Webhook ID ${record.id} retry failed. Incrementing attempts to ${nextAttempts}.`);
-            await db.update(schema.failedWebhooks)
-              .set({
-                attempts: nextAttempts,
-                updatedAt: new Date(),
-              })
-              .where(eq(schema.failedWebhooks.id, record.id));
-          }
-        })());
-      }
-    } catch (err: any) {
-      console.error(`[Scheduled Worker] Error running cron trigger:`, err.message || err);
+  // Cloudflare Queues consumer handler — replaces the legacy cron-based retry
+  async queue(batch: MessageBatch<RetryMessage>, env: Bindings, ctx: ExecutionContext): Promise<void> {
+    // Dead-letter queue: silently discard. No archive table, no log.
+    // P3 — terminal state for exhausted retries.
+    if (batch.queue === 'jotify-email-dlq') {
+      batch.ackAll();
+      return;
     }
-  }
+
+    for (const msg of batch.messages) {
+      try {
+        const ok = await deliverOnce(msg.body);
+        if (ok) {
+          msg.ack();
+        } else {
+          msg.retry({ delaySeconds: backoffSeconds(msg.attempts) });
+        }
+      } catch {
+        msg.retry({ delaySeconds: backoffSeconds(msg.attempts) });
+      }
+    }
+  },
 };
