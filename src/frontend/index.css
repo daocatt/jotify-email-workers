@@ -10,7 +10,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Terminal-Chic: scrollbar minimalism */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -25,4 +24,3 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #d1d5db;
 }
-@import "tailwindcss";

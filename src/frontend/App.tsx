@@ -3,13 +3,14 @@ import Login from './Login';
 import Register from './Register';
 import ForgotPassword from './ForgotPassword';
 import Dashboard from './Dashboard';
+import { PublicConfig, DbUser } from './types';
 
 export default function App() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<DbUser | null>(null);
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'login' | 'register' | 'forgot' | 'dashboard'>('login');
-  const [config, setConfig] = useState<any>({ allowRegister: true, requireApproval: true, maxDomainsPerUser: 1 });
+  const [config, setConfig] = useState<PublicConfig>({ allowRegister: true, requireApproval: true, maxDomainsPerUser: 1, turnstileSiteKey: null });
 
   // Check login session on load
   useEffect(() => {
@@ -92,7 +93,7 @@ export default function App() {
   }
 
   if (view === 'dashboard') {
-    return <Dashboard user={user} config={config} onLogout={handleLogout} />;
+    return <Dashboard user={user!} config={config} onLogout={handleLogout} />;
   }
 
   return null;

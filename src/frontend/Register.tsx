@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import TurnstileWidget from './TurnstileWidget';
+import { PublicConfig } from './types';
 
 interface RegisterProps {
-  config: any;
+  config: PublicConfig;
   setView: (view: 'login' | 'register' | 'forgot' | 'dashboard') => void;
 }
 
@@ -14,22 +16,7 @@ export default function Register({ config, setView }: RegisterProps) {
   const [authError, setAuthError] = useState('');
   const [authSuccess, setAuthSuccess] = useState('');
   const [turnstileToken, setTurnstileToken] = useState('');
-  const [turnstileLoaded, setTurnstileLoaded] = useState(!!(window as any).turnstile);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if ((window as any).turnstile) {
-      setTurnstileLoaded(true);
-      return;
-    }
-    const interval = setInterval(() => {
-      if ((window as any).turnstile) {
-        setTurnstileLoaded(true);
-        clearInterval(interval);
-      }
-    }, 200);
-    return () => clearInterval(interval);
-  }, []);
 
   const sendVerificationCode = async () => {
     if (!email) {
@@ -176,27 +163,7 @@ export default function Register({ config, setView }: RegisterProps) {
             </div>
 
             {config.turnstileSiteKey && (
-              <div 
-                key={`turnstile-${turnstileLoaded}`}
-                ref={(el) => {
-                  if (el && el.childNodes.length === 0 && (window as any).turnstile) {
-                    try {
-                      (window as any).turnstile.render(el, {
-                        sitekey: config.turnstileSiteKey,
-                        callback: (token: string) => {
-                          setTurnstileToken(token);
-                        },
-                        'expired-callback': () => {
-                          setTurnstileToken('');
-                        }
-                      });
-                    } catch (err) {
-                      // ignore
-                    }
-                  }
-                }} 
-                className="my-2 flex justify-center"
-              ></div>
+              <TurnstileWidget siteKey={config.turnstileSiteKey} onToken={setTurnstileToken} />
             )}
 
             <button
