@@ -4,10 +4,11 @@ import {
   XCircle, Mail, Globe, Server, Link, AlertCircle, RefreshCw, Send,
   Menu, X, Edit, ChevronLeft, ChevronRight
 } from 'lucide-react';
+import { DbUser, PublicConfig, Domain, Destination, ForwardRule, Webhook, WebhookRule, AdminUser } from './types';
 
 interface DashboardProps {
-  user: any;
-  config: any;
+  user: DbUser;
+  config: PublicConfig;
   onLogout: () => void;
 }
 
@@ -15,16 +16,17 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
   const [activeTab, setActiveTab] = useState<'domains' | 'destinations' | 'forwardRules' | 'webhooks' | 'webhookRules' | 'admin' | 'superadmin' | 'help'>('domains');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   // Data states
-  const [domains, setDomains] = useState<any[]>([]);
-  const [destinations, setDestinations] = useState<any[]>([]);
-  const [forwardRules, setForwardRules] = useState<any[]>([]);
-  const [webhooks, setWebhooks] = useState<any[]>([]);
-  const [webhookRules, setWebhookRules] = useState<any[]>([]);
-  const [usersList, setUsersList] = useState<any[]>([]);
+  const [domains, setDomains] = useState<Domain[]>([]);
+  const [destinations, setDestinations] = useState<Destination[]>([]);
+  const [forwardRules, setForwardRules] = useState<ForwardRule[]>([]);
+  const [webhooks, setWebhooks] = useState<Webhook[]>([]);
+  const [webhookRules, setWebhookRules] = useState<WebhookRule[]>([]);
+  const [usersList, setUsersList] = useState<AdminUser[]>([]);
 
   // Input states for Domain / Destination adding (simple inputs)
   const [newDomain, setNewDomain] = useState('');
@@ -43,7 +45,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
 
   // ── Modal & Form States for WEBHOOKS ──
   const [webhookModalOpen, setWebhookModalOpen] = useState(false);
-  const [editingWebhook, setEditingWebhook] = useState<any>(null); // null means adding
+  const [editingWebhook, setEditingWebhook] = useState<Webhook | null>(null);
   const [webhookName, setWebhookName] = useState('');
   const [webhookUrl, setWebhookUrl] = useState('');
   const [webhookAuthType, setWebhookAuthType] = useState('none');
@@ -52,7 +54,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
 
   // ── Modal & Form States for FORWARD RULES ──
   const [forwardRuleModalOpen, setForwardRuleModalOpen] = useState(false);
-  const [editingForwardRule, setEditingForwardRule] = useState<any>(null); // null means adding
+  const [editingForwardRule, setEditingForwardRule] = useState<ForwardRule | null>(null);
   const [rulePattern, setRulePattern] = useState('');
   const [ruleSubdomain, setRuleSubdomain] = useState('');
   const [ruleDomainId, setRuleDomainId] = useState('');
@@ -61,7 +63,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
 
   // ── Modal & Form States for WEBHOOK RULES ──
   const [webhookRuleModalOpen, setWebhookRuleModalOpen] = useState(false);
-  const [editingWebhookRule, setEditingWebhookRule] = useState<any>(null); // null means adding
+  const [editingWebhookRule, setEditingWebhookRule] = useState<WebhookRule | null>(null);
   const [webhookRulePattern, setWebhookRulePattern] = useState('');
   const [webhookRuleSubdomain, setWebhookRuleSubdomain] = useState('');
   const [webhookRuleDomainId, setWebhookRuleDomainId] = useState('');
@@ -131,11 +133,12 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
       const res = await fetch('/api/user/change-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ newPassword }),
+        body: JSON.stringify({ oldPassword, newPassword }),
       });
       if (res.ok) {
         alert('密码修改成功！');
         setShowPasswordModal(false);
+        setOldPassword('');
         setNewPassword('');
       } else {
         const data = await res.json() as any;
@@ -1687,6 +1690,18 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
             </h4>
             <form onSubmit={handlePasswordChange} className="space-y-4">
               <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">当前密码</label>
+                <input
+                  type="password"
+                  required
+                  disabled={isChangingPassword}
+                  value={oldPassword}
+                  onChange={e => setOldPassword(e.target.value)}
+                  className="w-full text-xs px-3 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
+                  placeholder="输入当前密码"
+                />
+              </div>
+              <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">新密码</label>
                 <input
                   type="password"
@@ -1703,7 +1718,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
                 <button
                   type="button"
                   disabled={isChangingPassword}
-                  onClick={() => { setShowPasswordModal(false); setNewPassword(''); }}
+                  onClick={() => { setShowPasswordModal(false); setOldPassword(''); setNewPassword(''); }}
                   className="px-3.5 py-1.5 border border-gray-200 hover:bg-gray-50 font-semibold rounded cursor-pointer disabled:opacity-50"
                 >
                   取消
