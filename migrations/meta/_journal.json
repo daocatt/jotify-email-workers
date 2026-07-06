@@ -29,6 +29,13 @@
       "when": 1782518400000,
       "tag": "0003_fixed_delivery_idempotency",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1782604800000,
+      "tag": "0004_add_must_change_password",
+      "breakpoints": true
     }
   ]
 }

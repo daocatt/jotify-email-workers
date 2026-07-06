@@ -3,7 +3,7 @@ import { eq, or } from 'drizzle-orm';
 import * as schema from '../db/schema';
 import { getDb } from '../db';
 import { getAuth } from '../auth';
-import { Env, getSessionUser } from '../utils';
+import { Env, getSessionUser, validatePasswordStrength } from '../utils';
 
 const routes = new Hono<Env>();
 
@@ -14,17 +14,32 @@ routes.get('/api/admin/users', async (c) => {
   }
 
   const db = getDb(c.env.DB);
-  const list = await db.select({
-    id: schema.user.id,
-    name: schema.user.name,
-    email: schema.user.email,
-    role: schema.user.role,
-    status: schema.user.status,
-    createdAt: schema.user.createdAt,
-  }).from(schema.user)
-  .where(or(eq(schema.user.role, 'user'), eq(schema.user.role, 'admin')));
+  if (session.dbUser.role === 'superadmin') {
+    const list = await db.select({
+      id: schema.user.id,
+      name: schema.user.name,
+      email: schema.user.email,
+      role: schema.user.role,
+      status: schema.user.status,
+      mustChangePassword: schema.user.mustChangePassword,
+      createdAt: schema.user.createdAt,
+    }).from(schema.user)
+    .where(or(eq(schema.user.role, 'user'), eq(schema.user.role, 'admin')));
 
-  return c.json({ users: list });
+    return c.json({ users: list });
+  } else {
+    const list = await db.select({
+      id: schema.user.id,
+      name: schema.user.name,
+      email: schema.user.email,
+      role: schema.user.role,
+      status: schema.user.status,
+      createdAt: schema.user.createdAt,
+    }).from(schema.user)
+    .where(eq(schema.user.role, 'user'));
+
+    return c.json({ users: list });
+  }
 });
 
 routes.post('/api/admin/users/:id/approve', async (c) => {
@@ -91,6 +106,10 @@ routes.post('/api/admin/add-admin', async (c) => {
   if (!email || !password || !name) {
     return c.json({ error: 'Missing parameters' }, 400);
   }
+  const pwdErr = validatePasswordStrength(password);
+  if (pwdErr) {
+    return c.json({ error: pwdErr }, 400);
+  }
 
   const db = getDb(c.env.DB);
   try {
@@ -101,12 +120,12 @@ routes.post('/api/admin/add-admin', async (c) => {
 
     if (result?.user) {
       await db.update(schema.user)
-        .set({ role: 'admin', status: 'approved', emailVerified: true })
+        .set({ role: 'admin', status: 'approved', emailVerified: true, mustChangePassword: true })
         .where(eq(schema.user.id, result.user.id));
       return c.json({ success: true });
     }
-  } catch (err: any) {
-    return c.json({ error: err.message }, 400);
+  } catch {
+    return c.json({ error: 'Failed to create admin user' }, 400);
   }
 });
 

@@ -10,12 +10,14 @@ interface DashboardProps {
   user: DbUser;
   config: PublicConfig;
   onLogout: () => void;
+  forceChangePassword?: boolean;
+  onPasswordChanged?: () => void;
 }
 
-export default function Dashboard({ user, config, onLogout }: DashboardProps) {
+export default function Dashboard({ user, config, onLogout, forceChangePassword, onPasswordChanged }: DashboardProps) {
   const [activeTab, setActiveTab] = useState<'domains' | 'destinations' | 'forwardRules' | 'webhooks' | 'webhookRules' | 'admin' | 'superadmin' | 'help'>('domains');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(forceChangePassword || false);
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -140,6 +142,7 @@ export default function Dashboard({ user, config, onLogout }: DashboardProps) {
         setShowPasswordModal(false);
         setOldPassword('');
         setNewPassword('');
+        if (onPasswordChanged) onPasswordChanged();
       } else {
         const data = await res.json() as any;
         alert(`修改失败: ${data.error}`);

@@ -9,7 +9,7 @@ import {
   deliverOnce,
   RetryMessage,
 } from './retry';
-import { Bindings, hashShortKey } from './utils';
+import { Bindings, hashShortKey, maskEmail, signWebhookPayload } from './utils';
 
 async function streamToArrayBuffer(stream: ReadableStream, size: number): Promise<ArrayBuffer> {
   const reader = stream.getReader();
@@ -44,7 +44,7 @@ function stripHtml(html: string): string {
 export async function handleEmail(message: ForwardableEmailMessage, env: Bindings, ctx: ExecutionContext): Promise<void> {
   const to = message.to.toLowerCase().trim();
   const from = message.from.toLowerCase().trim();
-  console.log(`[Email Worker] Inbound email: from=${from} to=${to}`);
+  console.log(`[Email Worker] Inbound email: from=${maskEmail(from)} to=${maskEmail(to)}`);
 
   const db = getDb(env.DB);
   const parsedDomain = to.split('@')[1];
@@ -122,7 +122,7 @@ export async function handleEmail(message: ForwardableEmailMessage, env: Binding
     try {
       const regex = new RegExp(`^${r.rule.usernamePattern}$`, 'i');
       if (regex.test(username)) {
-        console.log(`[Email Worker] Match forwarding rule! Forwarding to: ${r.destination}`);
+        console.log(`[Email Worker] Match forwarding rule! Forwarding to: ${maskEmail(r.destination)}`);
         await message.forward(r.destination);
         ruleMatched = true;
       }
@@ -143,7 +143,7 @@ export async function handleEmail(message: ForwardableEmailMessage, env: Binding
     try {
       const regex = new RegExp(`^${w.rule.usernamePattern}$`, 'i');
       if (regex.test(username)) {
-        console.log(`[Email Worker] Match webhook rule! Triggering HTTP POST to: ${w.webhook.url}`);
+        console.log(`[Email Worker] Match webhook rule! Triggering HTTP POST to: ${w.webhook.url.replace(/\/\/[^@]+@/, '//***@')}`);
         
         if (!rawEmail) {
           rawEmail = await streamToArrayBuffer(message.raw, message.rawSize);
@@ -173,11 +173,19 @@ export async function handleEmail(message: ForwardableEmailMessage, env: Binding
               ? `${env.R2_PUBLIC_URL}${r2Key}` 
               : `${env.R2_PUBLIC_URL}/${r2Key}`;
 
+            let attachmentUrl = publicUrl;
+            try {
+              const signedUrlObj = await (env.ATTACHMENT_BUCKET as any).createSignedUrl(r2Key, 3600);
+              attachmentUrl = signedUrlObj || publicUrl;
+            } catch {
+              attachmentUrl = publicUrl;
+            }
+
             attachmentUrls.push({
               filename: att.filename || 'unnamed',
               mimeType: att.mimeType || 'application/octet-stream',
               size: typeof att.content === 'string' ? att.content.length : (att.content as ArrayBuffer).byteLength,
-              url: publicUrl
+              url: attachmentUrl
             });
           }
         }
@@ -196,6 +204,11 @@ export async function handleEmail(message: ForwardableEmailMessage, env: Binding
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
         };
+        if (env.WEBHOOK_SIGNING_SECRET) {
+          const sig = await signWebhookPayload(payload, env.WEBHOOK_SIGNING_SECRET);
+          headers['X-Jotify-Signature'] = sig;
+          headers['X-Jotify-Delivery-Id'] = webhookIdempotencyKey;
+        }
         if (w.webhook.authType === 'bearer' && w.webhook.authToken) {
           headers['Authorization'] = `Bearer ${w.webhook.authToken}`;
         } else if (w.webhook.authType === 'header' && w.webhook.authToken) {
@@ -217,7 +230,7 @@ export async function handleEmail(message: ForwardableEmailMessage, env: Binding
                 payload: { url: w.webhook.url, headers, body: payload },
               });
             } catch (enqueueErr: any) {
-              console.error(`[Email Worker] Failed to enqueue retry for ${w.webhook.url}:`, enqueueErr.message || enqueueErr);
+              console.error(`[Email Worker] Failed to enqueue retry:`, enqueueErr.message || enqueueErr);
             }
           }
         })());
@@ -233,7 +246,7 @@ export async function handleEmail(message: ForwardableEmailMessage, env: Binding
     return;
   }
 
-  console.warn(`[Email Worker] No rule matched for ${to}, rejecting.`);
+  console.warn(`[Email Worker] No rule matched for ${maskEmail(to)}, rejecting.`);
   message.setReject('Address not allowed');
 }
 

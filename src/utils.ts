@@ -19,6 +19,7 @@ export interface Bindings {
   TURNSTILE_SECRET_KEY?: string;
   ATTACHMENT_BUCKET?: R2Bucket;
   R2_PUBLIC_URL?: string;
+  WEBHOOK_SIGNING_SECRET?: string;
   RETRY_QUEUE: Queue<import('./retry').RetryMessage>;
 }
 
@@ -60,11 +61,33 @@ export async function hashShortKey(input: string): Promise<string> {
   return hashArray.slice(0, 16).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+const PRIVATE_IP_RANGES = [
+  /^0\./,
+  /^10\./,
+  /^127\./,
+  /^169\.254\./,
+  /^172\.(1[6-9]|2\d|3[01])\./,
+  /^192\.0\.0\./,
+  /^192\.168\./,
+  /^198\.1[8-9]\./,
+  /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./,
+];
+
 export function validateWebhookUrl(url: string): string | null {
   try {
     const parsed = new URL(url);
-    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
-      return 'Webhook URL must use HTTP or HTTPS protocol';
+    if (parsed.protocol !== 'https:') {
+      return 'Webhook URL must use HTTPS protocol';
+    }
+    const hostname = parsed.hostname.toLowerCase();
+    if (hostname === 'localhost' || hostname.endsWith('.localhost') || hostname.endsWith('.local') || hostname.endsWith('.internal')) {
+      return 'Webhook URL cannot point to local/internal addresses';
+    }
+    if (PRIVATE_IP_RANGES.some(r => r.test(hostname))) {
+      return 'Webhook URL cannot point to private IP addresses';
+    }
+    if (/^\[|^[0-9a-f]*:|::1?$/i.test(hostname)) {
+      return 'Webhook URL cannot point to IP addresses (domain names only)';
     }
     return null;
   } catch {
@@ -72,11 +95,67 @@ export function validateWebhookUrl(url: string): string | null {
   }
 }
 
+const RE_DANGEROUS = /\(\?[^)]*[+*][+*]|\(\[[^\]]*\][+*][+*]|\(\([^)]*\)[+*][+*]/;
+const MAX_REGEX_LEN = 128;
+
 export function validateRegexPattern(pattern: string): string | null {
+  if (!pattern || pattern.length > MAX_REGEX_LEN) {
+    return `Regex pattern must be 1-${MAX_REGEX_LEN} characters`;
+  }
+  if (RE_DANGEROUS.test(pattern)) {
+    return 'Regex pattern contains potentially dangerous nested quantifiers';
+  }
   try {
     new RegExp(pattern);
     return null;
   } catch {
     return 'Invalid regex username pattern';
   }
+}
+
+const EMAIL_RE = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+
+export function validateEmail(email: string): boolean {
+  return EMAIL_RE.test(email);
+}
+
+export function validatePasswordStrength(password: string): string | null {
+  if (!password || password.length < 8) {
+    return 'Password must be at least 8 characters';
+  }
+  if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+    return 'Password must contain uppercase, lowercase, and a number';
+  }
+  return null;
+}
+
+export function maskEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  if (!domain) return '***';
+  if (local.length <= 2) return `${local[0]}***@${domain}`;
+  return `${local[0]}${'*'.repeat(Math.min(local.length - 2, 5))}${local[local.length - 1]}@${domain}`;
+}
+
+export function maskAuthToken(authType: string, token: string | null): string | null {
+  if (!token) return null;
+  if (authType === 'bearer') {
+    const clean = token.replace(/^bearer\s+/i, '');
+    return clean.length <= 6 ? '***' : `${clean.slice(0, 3)}***${clean.slice(-3)}`;
+  }
+  if (authType === 'header') {
+    const parts = token.split(':');
+    if (parts.length === 2) {
+      const v = parts[1].trim();
+      return `${parts[0].trim()}:${v.length <= 6 ? '***' : `${v.slice(0, 3)}***${v.slice(-3)}`}`;
+    }
+    return token.length <= 6 ? '***' : `${token.slice(0, 3)}***${token.slice(-3)}`;
+  }
+  return null;
+}
+
+export async function signWebhookPayload(payload: unknown, secret: string): Promise<string> {
+  const data = new TextEncoder().encode(JSON.stringify(payload));
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, data);
+  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
 }

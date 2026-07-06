@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { eq, and } from 'drizzle-orm';
 import * as schema from '../db/schema';
 import { getDb } from '../db';
-import { Env, getSessionUser } from '../utils';
+import { Env, getSessionUser, validateEmail } from '../utils';
 
 const routes = new Hono<Env>();
 
@@ -21,7 +21,7 @@ routes.post('/api/destinations', async (c) => {
 
   const { email } = await c.req.json();
   const cleanEmail = email?.trim().toLowerCase();
-  if (!cleanEmail || !cleanEmail.includes('@')) {
+  if (!cleanEmail || !validateEmail(cleanEmail)) {
     return c.json({ error: 'Invalid email address' }, 400);
   }
 

@@ -12,6 +12,7 @@ export const user = sqliteTable('user', {
   status: text('status').notNull().default('pending'), // 'pending', 'approved', 'rejected'
   resetToken: text('resetToken'),
   resetTokenExpires: integer('resetTokenExpires'),
+  mustChangePassword: integer('mustChangePassword', { mode: 'boolean' }).notNull().default(false),
   tgToken: text('tgToken'),
   tgChatId: text('tgChatId'),
   createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
