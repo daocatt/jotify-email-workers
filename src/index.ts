@@ -4,7 +4,7 @@ import { eq, sql } from 'drizzle-orm';
 import * as schema from './db/schema';
 import { getAuth } from './auth';
 import { getDb } from './db';
-import { Bindings, Env, verifyTurnstile } from './utils';
+import { Bindings, Env, verifyTurnstile, maskEmail } from './utils';
 import { handleEmail, handleQueue } from './email-handler';
 import { RetryMessage } from './retry';
 
@@ -37,40 +37,66 @@ app.use('*', cors({
     return null;
   },
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+  allowHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-CSRF-Token'],
   exposeHeaders: ['Set-Cookie'],
   credentials: true,
 }));
 
-let superadminSeeded = false;
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
 app.use('*', async (c, next) => {
-  if (!superadminSeeded) {
-    const db = getDb(c.env.DB);
-    const userCount = await db.select({ count: sql`count(*)` }).from(schema.user).then(r => r[0]?.count || 0);
-    if (userCount === 0) {
-      const adminEmail = c.env.SUPERADMIN_EMAIL;
-      const adminPassword = c.env.SUPERADMIN_PASSWORD;
-      if (!adminEmail || !adminPassword) {
-        console.error('[Seeding] SUPERADMIN_EMAIL and SUPERADMIN_PASSWORD must be configured to seed the initial admin.');
-      } else {
-        console.log(`[Seeding] Seeding default superadmin user ${adminEmail}...`);
-        try {
-          const auth = getAuth(c.env.DB, c.env.BETTER_AUTH_SECRET, c.env.BETTER_AUTH_URL);
-          await auth.api.signUpEmail({
-            body: { email: adminEmail, password: adminPassword, name: 'Super Admin' }
-          });
-          await db.update(schema.user)
-            .set({ role: 'superadmin', status: 'approved' })
-            .where(eq(schema.user.email, adminEmail));
-          console.log('[Seeding] Superadmin seeded successfully.');
-        } catch (err: any) {
-          console.error('[Seeding] Superadmin seeding failed:', err);
-        }
-      }
+  const ip = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'unknown';
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (entry && now < entry.resetAt) {
+    if (entry.count > 120) {
+      return c.json({ error: 'Too many requests' }, 429);
     }
-    superadminSeeded = true;
+    entry.count++;
+  } else {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + 60_000 });
   }
+  if (rateLimitMap.size > 10000) {
+    for (const [k, v] of rateLimitMap) {
+      if (v.resetAt <= now) rateLimitMap.delete(k);
+    }
+  }
+  await next();
+});
+
+let seedPromise: Promise<void> | null = null;
+
+async function ensureSuperadminSeeded(env: Bindings) {
+  const db = getDb(env.DB);
+  const userCount = await db.select({ count: sql<number>`count(*)` }).from(schema.user).then(r => r[0]?.count || 0);
+  if (userCount > 0) return;
+
+  const adminEmail = env.SUPERADMIN_EMAIL;
+  const adminPassword = env.SUPERADMIN_PASSWORD;
+  if (!adminEmail || !adminPassword) {
+    console.error('[Seeding] SUPERADMIN_EMAIL and SUPERADMIN_PASSWORD must be configured to seed the initial admin.');
+    return;
+  }
+  console.log(`[Seeding] Seeding default superadmin user ${maskEmail(adminEmail)}...`);
+  try {
+    const auth = getAuth(env.DB, env.BETTER_AUTH_SECRET, env.BETTER_AUTH_URL);
+    await auth.api.signUpEmail({
+      body: { email: adminEmail, password: adminPassword, name: 'Super Admin' }
+    });
+    await db.update(schema.user)
+      .set({ role: 'superadmin', status: 'approved', mustChangePassword: true })
+      .where(eq(schema.user.email, adminEmail));
+    console.log('[Seeding] Superadmin seeded successfully.');
+  } catch (err: any) {
+    console.error('[Seeding] Superadmin seeding failed:', err?.message || err);
+  }
+}
+
+app.use('*', async (c, next) => {
+  if (!seedPromise) {
+    seedPromise = ensureSuperadminSeeded(c.env);
+  }
+  await seedPromise;
   await next();
 });
 

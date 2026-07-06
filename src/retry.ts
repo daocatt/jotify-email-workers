@@ -72,13 +72,13 @@ export async function deliverWebhookWithRetry(
       });
       clearTimeout(id);
       if (res.ok) {
-        console.log(`[Retry] Webhook delivered to ${url} (status: ${res.status}, attempt: ${attempt + 1})`);
+        console.log(`[Retry] Webhook delivered (status: ${res.status}, attempt: ${attempt + 1})`);
         return true;
       }
-      console.warn(`[Retry] Webhook returned ${res.status} from ${url} (attempt: ${attempt + 1}/${retries + 1})`);
+      console.warn(`[Retry] Webhook returned ${res.status} (attempt: ${attempt + 1}/${retries + 1})`);
     } catch (err: any) {
       clearTimeout(id);
-      console.error(`[Retry] Webhook attempt ${attempt + 1} failed for ${url}:`, err.message || err);
+      console.error(`[Retry] Webhook attempt ${attempt + 1} failed:`, err.message || err);
     }
     attempt++;
     if (attempt <= retries) {

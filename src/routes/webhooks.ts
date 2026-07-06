@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { eq, and } from 'drizzle-orm';
 import * as schema from '../db/schema';
 import { getDb } from '../db';
-import { Env, getSessionUser, validateWebhookUrl } from '../utils';
+import { Env, getSessionUser, validateWebhookUrl, maskAuthToken } from '../utils';
 
 const routes = new Hono<Env>();
 
@@ -12,7 +12,11 @@ routes.get('/api/webhooks', async (c) => {
 
   const db = getDb(c.env.DB);
   const list = await db.select().from(schema.webhooks).where(eq(schema.webhooks.userId, session.dbUser.id));
-  return c.json({ webhooks: list });
+  const safe = list.map(w => ({
+    ...w,
+    authToken: maskAuthToken(w.authType, w.authToken),
+  }));
+  return c.json({ webhooks: safe });
 });
 
 routes.post('/api/webhooks', async (c) => {

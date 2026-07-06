@@ -4,14 +4,15 @@ import { hashPassword } from 'better-auth/crypto';
 import * as schema from '../db/schema';
 import { getDb } from '../db';
 import { getAuth } from '../auth';
-import { Env, getSessionUser } from '../utils';
+import { Env, getSessionUser, validatePasswordStrength } from '../utils';
 
 const routes = new Hono<Env>();
 
 routes.get('/api/user/me', async (c) => {
   const session = await getSessionUser(c);
   if (!session) return c.json({ error: 'Unauthorized' }, 401);
-  return c.json({ session: session.session, user: session.dbUser });
+  const { mustChangePassword, ...safeUser } = session.dbUser;
+  return c.json({ session: session.session, user: safeUser, mustChangePassword: !!mustChangePassword });
 });
 
 routes.post('/api/user/change-password', async (c) => {
@@ -22,8 +23,9 @@ routes.post('/api/user/change-password', async (c) => {
   if (!oldPassword) {
     return c.json({ error: 'Current password is required' }, 400);
   }
-  if (!newPassword || newPassword.length < 6) {
-    return c.json({ error: 'New password must be at least 6 characters' }, 400);
+  const pwdErr = validatePasswordStrength(newPassword);
+  if (pwdErr) {
+    return c.json({ error: pwdErr }, 400);
   }
 
   const db = getDb(c.env.DB);
@@ -39,8 +41,11 @@ routes.post('/api/user/change-password', async (c) => {
     await db.update(schema.account)
       .set({ password: hashedPassword, updatedAt: new Date() })
       .where(eq(schema.account.userId, session.dbUser.id));
+    await db.update(schema.user)
+      .set({ mustChangePassword: false, updatedAt: new Date() })
+      .where(eq(schema.user.id, session.dbUser.id));
     return c.json({ success: true });
-  } catch (err: any) {
+  } catch {
     return c.json({ error: 'Current password is incorrect' }, 400);
   }
 });

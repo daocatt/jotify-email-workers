@@ -25,3 +25,8 @@ SUPERADMIN_PASSWORD="admin123456"
 # Leave commented out or empty if Turnstile is disabled.
 # TURNSTILE_SITE_KEY="your_site_key_here"
 # TURNSTILE_SECRET_KEY="your_secret_key_here"
+
+# Webhook Signing Secret (Recommended for production)
+# Generate with: openssl rand -hex 32
+# When set, all webhook deliveries include X-Jotify-Signature header (HMAC-SHA256)
+# WEBHOOK_SIGNING_SECRET="your_webhook_signing_secret_here"

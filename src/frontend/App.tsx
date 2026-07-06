@@ -9,7 +9,8 @@ export default function App() {
   const [user, setUser] = useState<DbUser | null>(null);
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<'login' | 'register' | 'forgot' | 'dashboard'>('login');
+  const [mustChangePassword, setMustChangePassword] = useState(false);
+  const [view, setView] = useState<'login' | 'register' | 'forgot' | 'dashboard' | 'forceChangePassword'>('login');
   const [config, setConfig] = useState<PublicConfig>({ allowRegister: true, requireApproval: true, maxDomainsPerUser: 1, turnstileSiteKey: null });
 
   // Check login session on load
@@ -37,7 +38,8 @@ export default function App() {
         const data = await res.json() as any;
         setUser(data.user);
         setSession(data.session);
-        setView('dashboard');
+        setMustChangePassword(!!data.mustChangePassword);
+        setView(data.mustChangePassword ? 'forceChangePassword' : 'dashboard');
       } else {
         setUser(null);
         setSession(null);
@@ -90,6 +92,10 @@ export default function App() {
 
   if (view === 'forgot') {
     return <ForgotPassword config={config} setView={setView} />;
+  }
+
+  if (view === 'forceChangePassword' && user) {
+    return <Dashboard user={user} config={config} onLogout={handleLogout} forceChangePassword={mustChangePassword} onPasswordChanged={() => { setMustChangePassword(false); setView('dashboard'); }} />;
   }
 
   if (view === 'dashboard') {

@@ -76,5 +76,6 @@ export interface AdminUser {
   email: string;
   role: string;
   status: string;
+  mustChangePassword?: boolean;
   createdAt: string;
 }
