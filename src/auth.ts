@@ -5,6 +5,11 @@ import * as schema from './db/schema';
 
 export function getAuth(d1: D1Database, secret: string, baseUrl: string) {
   const db = getDb(d1);
+  const origins: string[] = [];
+  if (baseUrl) origins.push(baseUrl);
+  if (baseUrl && !baseUrl.includes('localhost')) {
+    origins.push('http://localhost:5173', 'http://localhost:8787');
+  }
   return betterAuth({
     database: drizzleAdapter(db, {
       provider: 'sqlite',
@@ -16,9 +21,10 @@ export function getAuth(d1: D1Database, secret: string, baseUrl: string) {
     },
     secret,
     baseURL: baseUrl,
-    trustedOrigins: [
-      'http://localhost:5173',
-      'http://localhost:5174',
-    ],
+    trustedOrigins: origins,
+    session: {
+      expiresIn: 60 * 60 * 24 * 7,
+      updateAge: 60 * 60 * 24,
+    },
   });
 }
