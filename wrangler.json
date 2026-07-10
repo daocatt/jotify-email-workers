@@ -2,23 +2,25 @@
   "name": "jotify-email-workers",
   "main": "src/index.ts",
   "compatibility_date": "2025-02-24",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "jotify_email_db",
-      "database_id": "YOUR_D1_DATABASE_ID_HERE"
+      "database_id": "3da92ce5-edd6-4424-a637-7d2efdb239ed"
     }
   ],
   "r2_buckets": [
     {
       "binding": "ATTACHMENT_BUCKET",
-      "bucket_name": "YOUR_R2_BUCKET_NAME_HERE"
+      "bucket_name": "jotify-email-assets"
     }
   ],
   "routes": [
     {
-      "pattern": "your-custom-domain.com",
+      "pattern": "jotroute.zwq.me",
       "custom_domain": true
     }
   ],

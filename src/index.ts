@@ -7,6 +7,7 @@ import { getDb } from './db';
 import { Bindings, Env, verifyTurnstile, maskEmail } from './utils';
 import { handleEmail, handleQueue } from './email-handler';
 import { RetryMessage } from './retry';
+import { RateLimiterDO } from './rate-limiter-do';
 
 import publicRoutes from './routes/public';
 import userRoutes from './routes/user';
@@ -42,24 +43,17 @@ app.use('*', cors({
   credentials: true,
 }));
 
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-
 app.use('*', async (c, next) => {
-  const ip = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'unknown';
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
-  if (entry && now < entry.resetAt) {
-    if (entry.count > 120) {
-      return c.json({ error: 'Too many requests' }, 429);
-    }
-    entry.count++;
-  } else {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + 60_000 });
+  const ip = c.req.header('cf-connecting-ip') || 'unknown';
+  if (!c.env.RATE_LIMITER) {
+    await next();
+    return;
   }
-  if (rateLimitMap.size > 10000) {
-    for (const [k, v] of rateLimitMap) {
-      if (v.resetAt <= now) rateLimitMap.delete(k);
-    }
+  const id = c.env.RATE_LIMITER.idFromName(`ip:${ip}`);
+  const stub = c.env.RATE_LIMITER.get(id);
+  const result = await stub.check(ip, 120, 60_000);
+  if (!result.allowed) {
+    return c.json({ error: 'Too many requests' }, 429);
   }
   await next();
 });
@@ -130,6 +124,8 @@ app.route('/', forwardRuleRoutes);
 app.route('/', webhookRoutes);
 app.route('/', webhookRuleRoutes);
 app.route('/', adminRoutes);
+
+export { RateLimiterDO } from './rate-limiter-do';
 
 export default {
   fetch: app.fetch,
