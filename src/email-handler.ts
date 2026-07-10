@@ -176,16 +176,18 @@ export async function handleEmail(message: ForwardableEmailMessage, env: Binding
             }
           });
 
-          const publicUrl = env.R2_PUBLIC_URL.endsWith('/') 
-            ? `${env.R2_PUBLIC_URL}${r2Key}` 
-            : `${env.R2_PUBLIC_URL}/${r2Key}`;
-
-          let attachmentUrl = publicUrl;
+          let attachmentUrl: string;
           try {
             const signedUrlObj = await (env.ATTACHMENT_BUCKET as any).createSignedUrl(r2Key, 3600);
-            attachmentUrl = signedUrlObj || publicUrl;
+            if (signedUrlObj) {
+              attachmentUrl = signedUrlObj;
+            } else {
+              console.warn(`[Email Worker] Signed URL not available for ${r2Key}, skipping attachment URL`);
+              continue;
+            }
           } catch {
-            attachmentUrl = publicUrl;
+            console.warn(`[Email Worker] Failed to create signed URL for ${r2Key}, skipping attachment URL`);
+            continue;
           }
 
           attachmentUrls.push({
