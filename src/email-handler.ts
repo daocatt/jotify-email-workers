@@ -83,8 +83,8 @@ export async function handleEmail(message: ForwardableEmailMessage, env: Binding
       console.log(`[Email Worker] Duplicate inbound message ${dedupKey}, already processed. Skipping.`);
       return;
     }
-  } catch (err: any) {
-    console.warn(`[Email Worker] Idempotency check failed: ${err.message}. Continuing.`);
+  } catch {
+    console.warn('[Email Worker] Idempotency check failed. Continuing.');
   }
 
   const deliveryUuid = crypto.randomUUID();

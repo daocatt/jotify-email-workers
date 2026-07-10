@@ -82,7 +82,7 @@ async function ensureSuperadminSeeded(env: Bindings) {
       .where(eq(schema.user.email, adminEmail));
     console.log('[Seeding] Superadmin seeded successfully.');
   } catch (err: any) {
-    console.error('[Seeding] Superadmin seeding failed:', err?.message || err);
+    console.error('[Seeding] Superadmin seeding failed');
   }
 }
 
