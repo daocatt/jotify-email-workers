@@ -74,20 +74,44 @@ const PRIVATE_IP_RANGES = [
   /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./,
 ];
 
+function isPrivateIPv6(hostname: string): boolean {
+  const h = hostname.toLowerCase();
+  if (h === '::1' || h === '::' || h === '0:0:0:0:0:0:0:1' || h === '0:0:0:0:0:0:0:0') return true;
+  if (h.startsWith('fc') || h.startsWith('fd')) return true;
+  if (h.startsWith('fe80')) return true;
+  if (h.startsWith('fec0')) return true;
+  if (h.startsWith('::ffff:')) {
+    const ipv4Part = h.slice(7);
+    if (PRIVATE_IP_RANGES.some(r => r.test(ipv4Part))) return true;
+  }
+  return false;
+}
+
+function isIPAddress(hostname: string): boolean {
+  if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)) return true;
+  if (/^\[.*\]$/.test(hostname)) return true;
+  if (/^[0-9a-f]*:.*:/i.test(hostname)) return true;
+  if (hostname === '::1') return true;
+  return false;
+}
+
 export function validateWebhookUrl(url: string): string | null {
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== 'https:') {
       return 'Webhook URL must use HTTPS protocol';
     }
-    const hostname = parsed.hostname.toLowerCase();
+    const hostname = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '');
     if (hostname === 'localhost' || hostname.endsWith('.localhost') || hostname.endsWith('.local') || hostname.endsWith('.internal')) {
       return 'Webhook URL cannot point to local/internal addresses';
     }
     if (PRIVATE_IP_RANGES.some(r => r.test(hostname))) {
       return 'Webhook URL cannot point to private IP addresses';
     }
-    if (/^\[|^[0-9a-f]*:|::1?$/i.test(hostname)) {
+    if (isPrivateIPv6(hostname)) {
+      return 'Webhook URL cannot point to private IP addresses';
+    }
+    if (isIPAddress(hostname)) {
       return 'Webhook URL cannot point to IP addresses (domain names only)';
     }
     return null;
