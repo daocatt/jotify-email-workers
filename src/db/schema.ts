@@ -150,3 +150,20 @@ export const deliveryIdempotency = sqliteTable('delivery_idempotency', {
     createdAtIdx: index('delivery_idempotency_created_at_idx').on(table.createdAt),
   };
 });
+
+export const auditLog = sqliteTable('audit_log', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  actorId: text('actor_id').notNull(),
+  actorRole: text('actor_role').notNull(),
+  action: text('action').notNull(),
+  targetId: text('target_id'),
+  targetEmail: text('target_email'),
+  detail: text('detail'),
+  ip: text('ip'),
+  createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
+}, (table) => {
+  return {
+    actorIdIdx: index('audit_log_actor_id_idx').on(table.actorId),
+    createdAtIdx: index('audit_log_created_at_idx').on(table.createdAt),
+  };
+});
