@@ -85,7 +85,7 @@ export async function deliverWebhookWithRetry(
       console.warn(`[Retry] Webhook returned ${res.status} (attempt: ${attempt + 1}/${retries + 1})`);
     } catch (err: any) {
       clearTimeout(id);
-      console.error(`[Retry] Webhook attempt ${attempt + 1} failed:`, err.message || err);
+      console.error(`[Retry] Webhook attempt ${attempt + 1} failed`);
     }
     attempt++;
     if (attempt <= retries) {
