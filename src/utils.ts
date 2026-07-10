@@ -95,8 +95,9 @@ export function validateWebhookUrl(url: string): string | null {
   }
 }
 
-const RE_DANGEROUS = /\(\?[^)]*[+*][+*]|\(\[[^\]]*\][+*][+*]|\(\([^)]*\)[+*][+*]/;
+const RE_DANGEROUS = /\(\?[^)]*[+*][+*]|\(\[[^\]]*\][+*][+*]|\(\([^)]*\)[+*][+*]|\([^)]*\)[+*]\s*[+*]|\([^)]*[+*][+*][^)]*\)/;
 const MAX_REGEX_LEN = 128;
+const MAX_USERNAME_LEN = 256;
 
 export function validateRegexPattern(pattern: string): string | null {
   if (!pattern || pattern.length > MAX_REGEX_LEN) {
@@ -110,6 +111,16 @@ export function validateRegexPattern(pattern: string): string | null {
     return null;
   } catch {
     return 'Invalid regex username pattern';
+  }
+}
+
+export function safeRegexTest(pattern: string, input: string, flags = 'i'): boolean | null {
+  if (input.length > MAX_USERNAME_LEN) return null;
+  try {
+    const regex = new RegExp(`^${pattern}$`, flags);
+    return regex.test(input);
+  } catch {
+    return null;
   }
 }
 
