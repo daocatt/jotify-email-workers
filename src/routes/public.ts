@@ -48,8 +48,10 @@ routes.post('/api/public/send-code', async (c) => {
     }
   }
 
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+  const codeBuffer = new Uint8Array(4);
+  crypto.getRandomValues(codeBuffer);
+  const code = (codeBuffer[0] % 10).toString() + (codeBuffer[1] % 10).toString() + (codeBuffer[2] % 10).toString() + (codeBuffer[3] % 10).toString() + (Date.now() % 10).toString() + ((Date.now() >>> 4) % 10).toString();
+  const expiresAt = new Date(Date.now() + 3 * 60 * 1000);
 
   await db.delete(schema.verification).where(eq(schema.verification.identifier, identifier));
   await db.insert(schema.verification).values({
@@ -76,7 +78,7 @@ routes.post('/api/public/send-code', async (c) => {
         from: `${fromName} <${fromEmail}>`,
         to: [email],
         subject: `[Jotify] Verification Code: ${code}`,
-        text: `Your verification code is: ${code}. It expires in 5 minutes.`,
+        text: `Your verification code is: ${code}. It expires in 3 minutes.`,
       }),
     });
     if (!res.ok) {
