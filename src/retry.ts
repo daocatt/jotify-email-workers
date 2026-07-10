@@ -7,6 +7,8 @@
  * silently ackAll()s them — no archive table, no log, no alerting.
  */
 
+import { validateWebhookUrl } from './utils';
+
 const TIMEOUT_MS = 15000;
 
 /** Unified queue message format. */
@@ -59,6 +61,11 @@ export async function deliverWebhookWithRetry(
   retries = 2,
   timeoutMs = TIMEOUT_MS
 ): Promise<boolean> {
+  const urlErr = validateWebhookUrl(url);
+  if (urlErr) {
+    console.error(`[Retry] Webhook URL validation failed: ${urlErr}`);
+    return false;
+  }
   let attempt = 0;
   while (attempt <= retries) {
     const controller = new AbortController();
