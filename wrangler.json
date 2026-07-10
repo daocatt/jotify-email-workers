@@ -1,0 +1,66 @@
+{
+  "name": "jotify-email-workers",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-02-24",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "jotify_email_db",
+      "database_id": "3da92ce5-edd6-4424-a637-7d2efdb239ed"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "ATTACHMENT_BUCKET",
+      "bucket_name": "jotify-email-assets"
+    }
+  ],
+  "routes": [
+    {
+      "pattern": "jotroute.zwq.me",
+      "custom_domain": true
+    }
+  ],
+  "workers_dev": false,
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "RATE_LIMITER",
+        "class_name": "RateLimiterDO"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["RateLimiterDO"]
+    }
+  ],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS"
+  },
+  "queues": {
+    "producers": [
+      {
+        "binding": "RETRY_QUEUE",
+        "queue": "jotify-email-retry"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "jotify-email-retry",
+        "max_batch_size": 10,
+        "max_retries": 17,
+        "dead_letter_queue": "jotify-email-dlq"
+      },
+      {
+        "queue": "jotify-email-dlq",
+        "max_retries": 0
+      }
+    ]
+  }
+}
