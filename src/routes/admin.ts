@@ -3,9 +3,26 @@ import { eq, or } from 'drizzle-orm';
 import * as schema from '../db/schema';
 import { getDb } from '../db';
 import { getAuth } from '../auth';
-import { Env, getSessionUser, validatePasswordStrength } from '../utils';
+import { Env, getSessionUser, validatePasswordStrength, maskEmail } from '../utils';
 
 const routes = new Hono<Env>();
+
+async function writeAuditLog(db: ReturnType<typeof getDb>, actor: { id: string; role: string; email: string }, action: string, target: { id?: string; email?: string } | null, detail: string | null, ip: string | null) {
+  try {
+    await db.insert(schema.auditLog).values({
+      actorId: actor.id,
+      actorRole: actor.role,
+      action,
+      targetId: target?.id || null,
+      targetEmail: target?.email || null,
+      detail,
+      ip,
+      createdAt: new Date(),
+    });
+  } catch (err) {
+    console.error('[Audit] Failed to write audit log:', err);
+  }
+}
 
 routes.get('/api/admin/users', async (c) => {
   const session = await getSessionUser(c);
@@ -66,6 +83,9 @@ routes.post('/api/admin/users/:id/approve', async (c) => {
     .set({ status: 'approved', updatedAt: new Date() })
     .where(eq(schema.user.id, targetId));
 
+  const ip = c.req.header('cf-connecting-ip') || null;
+  await writeAuditLog(db, session.dbUser, 'approve_user', { id: targetId, email: target.email }, null, ip);
+
   return c.json({ success: true });
 });
 
@@ -92,6 +112,9 @@ routes.post('/api/admin/users/:id/reject', async (c) => {
   await db.update(schema.user)
     .set({ status: 'rejected', updatedAt: new Date() })
     .where(eq(schema.user.id, targetId));
+
+  const ip = c.req.header('cf-connecting-ip') || null;
+  await writeAuditLog(db, session.dbUser, 'reject_user', { id: targetId, email: target.email }, null, ip);
 
   return c.json({ success: true });
 });
@@ -122,6 +145,8 @@ routes.post('/api/admin/add-admin', async (c) => {
       await db.update(schema.user)
         .set({ role: 'admin', status: 'approved', emailVerified: true, mustChangePassword: true })
         .where(eq(schema.user.id, result.user.id));
+      const ip = c.req.header('cf-connecting-ip') || null;
+      await writeAuditLog(db, session.dbUser, 'add_admin', { id: result.user.id, email }, null, ip);
       return c.json({ success: true });
     }
   } catch {
@@ -146,6 +171,10 @@ routes.delete('/api/admin/users/:id', async (c) => {
   await db.delete(schema.session).where(eq(schema.session.userId, targetId));
   await db.delete(schema.account).where(eq(schema.account.userId, targetId));
   await db.delete(schema.user).where(eq(schema.user.id, targetId));
+
+  const ip = c.req.header('cf-connecting-ip') || null;
+  await writeAuditLog(db, session.dbUser, 'delete_user', { id: targetId, email: target.email }, `role=${target.role}`, ip);
+
   return c.json({ success: true });
 });
 
