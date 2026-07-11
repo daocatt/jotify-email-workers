@@ -69,14 +69,16 @@ routes.delete('/api/domains/:id', async (c) => {
       .where(eq(schema.webhookRules.domainId, id)).then(r => r[0]?.count || 0),
   ]);
 
-  const confirm = c.req.query('confirm');
-  if (confirm !== 'true') {
-    return c.json({
-      error: 'This domain has associated rules that will be cascade-deleted',
-      forwardRules: forwardCount,
-      webhookRules: webhookRuleCount,
-      confirmRequired: true,
-    }, 409);
+  if (forwardCount > 0 || webhookRuleCount > 0) {
+    const confirm = c.req.query('confirm');
+    if (confirm !== 'true') {
+      return c.json({
+        error: 'This domain has associated rules that will be cascade-deleted',
+        forwardRules: forwardCount,
+        webhookRules: webhookRuleCount,
+        confirmRequired: true,
+      }, 409);
+    }
   }
 
   await db.delete(schema.domains).where(eq(schema.domains.id, id));
