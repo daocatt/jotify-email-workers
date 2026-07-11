@@ -151,6 +151,12 @@ export const deliveryIdempotency = sqliteTable('delivery_idempotency', {
   };
 });
 
+export const codeAttempts = sqliteTable('code_attempts', {
+  identifier: text('identifier').primaryKey(),
+  attempts: integer('attempts').notNull().default(0),
+  expiresAt: integer('expiresAt', { mode: 'timestamp' }).notNull(),
+});
+
 export const auditLog = sqliteTable('audit_log', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   actorId: text('actor_id').notNull(),
