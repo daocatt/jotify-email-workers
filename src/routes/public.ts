@@ -173,26 +173,33 @@ routes.post('/api/public/verify-code', async (c) => {
   }
 
   if (record.value !== code) {
-    const attemptsKey = `code_attempts:${identifier}`;
-    const attemptsResult = await c.env.DB.prepare(
-      'SELECT value FROM verification WHERE identifier = ?'
-    ).bind(attemptsKey).first() as any;
-    const attempts = (attemptsResult?.value ? parseInt(attemptsResult.value) : 0) + 1;
+    const attemptsRecord = await db.select().from(schema.codeAttempts)
+      .where(eq(schema.codeAttempts.identifier, identifier))
+      .then(r => r[0]);
+    const attempts = (attemptsRecord?.attempts || 0) + 1;
 
     if (attempts >= MAX_CODE_ATTEMPTS) {
       await db.delete(schema.verification).where(eq(schema.verification.identifier, identifier));
-      await c.env.DB.prepare('DELETE FROM verification WHERE identifier = ?').bind(attemptsKey).run();
+      await db.delete(schema.codeAttempts).where(eq(schema.codeAttempts.identifier, identifier));
       return c.json({ error: 'Too many failed attempts. Please request a new code.' }, 400);
     }
 
-    await c.env.DB.prepare(
-      'INSERT OR REPLACE INTO verification (id, identifier, value, expiresAt, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)'
-    ).bind(crypto.randomUUID(), attemptsKey, attempts.toString(), record.expiresAt.getTime().toString(), new Date().toISOString(), new Date().toISOString()).run();
+    if (attemptsRecord) {
+      await db.update(schema.codeAttempts)
+        .set({ attempts, expiresAt: record.expiresAt })
+        .where(eq(schema.codeAttempts.identifier, identifier));
+    } else {
+      await db.insert(schema.codeAttempts).values({
+        identifier,
+        attempts,
+        expiresAt: record.expiresAt,
+      });
+    }
 
     return c.json({ error: 'Invalid verification code' }, 400);
   }
 
-  await c.env.DB.prepare('DELETE FROM verification WHERE identifier = ?').bind(`code_attempts:${identifier}`).run();
+  await db.delete(schema.codeAttempts).where(eq(schema.codeAttempts.identifier, identifier));
   return c.json({ success: true });
 });
 
