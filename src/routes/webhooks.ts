@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import * as schema from '../db/schema';
 import { getDb } from '../db';
 import { Env, getSessionUser, validateWebhookUrl, maskAuthToken } from '../utils';
@@ -49,10 +49,25 @@ routes.delete('/api/webhooks/:id', async (c) => {
   const id = parseInt(c.req.param('id'));
   const db = getDb(c.env.DB);
 
-  await db.delete(schema.webhooks).where(
-    and(eq(schema.webhooks.id, id), eq(schema.webhooks.userId, session.dbUser.id))
-  );
-  return c.json({ success: true });
+  const webhook = await db.select().from(schema.webhooks)
+    .where(and(eq(schema.webhooks.id, id), eq(schema.webhooks.userId, session.dbUser.id)))
+    .then(r => r[0]);
+  if (!webhook) return c.json({ error: 'Webhook not found' }, 404);
+
+  const ruleCount = await db.select({ count: sql<number>`count(*)` }).from(schema.webhookRules)
+    .where(eq(schema.webhookRules.webhookId, id)).then(r => r[0]?.count || 0);
+
+  const confirm = c.req.query('confirm');
+  if (confirm !== 'true') {
+    return c.json({
+      error: 'This webhook has associated rules that will be cascade-deleted',
+      webhookRules: ruleCount,
+      confirmRequired: true,
+    }, 409);
+  }
+
+  await db.delete(schema.webhooks).where(eq(schema.webhooks.id, id));
+  return c.json({ success: true, deletedWebhookRules: ruleCount });
 });
 
 routes.put('/api/webhooks/:id', async (c) => {

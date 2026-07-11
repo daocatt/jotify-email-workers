@@ -56,11 +56,31 @@ routes.delete('/api/domains/:id', async (c) => {
 
   const id = parseInt(c.req.param('id'));
   const db = getDb(c.env.DB);
-  
-  await db.delete(schema.domains).where(
-    and(eq(schema.domains.id, id), eq(schema.domains.userId, session.dbUser.id))
-  );
-  return c.json({ success: true });
+
+  const domain = await db.select().from(schema.domains)
+    .where(and(eq(schema.domains.id, id), eq(schema.domains.userId, session.dbUser.id)))
+    .then(r => r[0]);
+  if (!domain) return c.json({ error: 'Domain not found' }, 404);
+
+  const [forwardCount, webhookRuleCount] = await Promise.all([
+    db.select({ count: sql<number>`count(*)` }).from(schema.forwardRules)
+      .where(eq(schema.forwardRules.domainId, id)).then(r => r[0]?.count || 0),
+    db.select({ count: sql<number>`count(*)` }).from(schema.webhookRules)
+      .where(eq(schema.webhookRules.domainId, id)).then(r => r[0]?.count || 0),
+  ]);
+
+  const confirm = c.req.query('confirm');
+  if (confirm !== 'true') {
+    return c.json({
+      error: 'This domain has associated rules that will be cascade-deleted',
+      forwardRules: forwardCount,
+      webhookRules: webhookRuleCount,
+      confirmRequired: true,
+    }, 409);
+  }
+
+  await db.delete(schema.domains).where(eq(schema.domains.id, id));
+  return c.json({ success: true, deletedForwardRules: forwardCount, deletedWebhookRules: webhookRuleCount });
 });
 
 export default routes;
