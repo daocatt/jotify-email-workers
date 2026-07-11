@@ -26,15 +26,22 @@
     {
       "idx": 3,
       "version": "6",
-      "when": 1782518400000,
+      "when": 1783759273616,
       "tag": "0003_fixed_delivery_idempotency",
       "breakpoints": true
     },
     {
       "idx": 4,
       "version": "6",
-      "when": 1782604800000,
+      "when": 1783759284162,
       "tag": "0004_add_must_change_password",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1783759296659,
+      "tag": "0005_add_audit_log_and_code_attempts",
       "breakpoints": true
     }
   ]
