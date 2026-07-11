@@ -39,7 +39,6 @@ app.use('*', cors({
   },
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-CSRF-Token'],
-  exposeHeaders: ['Set-Cookie'],
   credentials: true,
 }));
 
