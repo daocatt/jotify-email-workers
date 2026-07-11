@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import * as schema from './db/schema';
 import { getAuth } from './auth';
 import { getDb } from './db';
@@ -61,15 +61,14 @@ let seedPromise: Promise<void> | null = null;
 
 async function ensureSuperadminSeeded(env: Bindings) {
   const db = getDb(env.DB);
-  const userCount = await db.select({ count: sql<number>`count(*)` }).from(schema.user).then(r => r[0]?.count || 0);
-  if (userCount > 0) return;
-
   const adminEmail = env.SUPERADMIN_EMAIL;
   const adminPassword = env.SUPERADMIN_PASSWORD;
-  if (!adminEmail || !adminPassword) {
-    console.error('[Seeding] SUPERADMIN_EMAIL and SUPERADMIN_PASSWORD must be configured to seed the initial admin.');
-    return;
-  }
+  if (!adminEmail || !adminPassword) return;
+
+  const existing = await db.select({ id: schema.user.id }).from(schema.user)
+    .where(eq(schema.user.email, adminEmail)).then(r => r[0]);
+  if (existing) return;
+
   console.log(`[Seeding] Seeding default superadmin user ${maskEmail(adminEmail)}...`);
   try {
     const auth = getAuth(env.DB, env.BETTER_AUTH_SECRET, env.BETTER_AUTH_URL);
@@ -80,7 +79,7 @@ async function ensureSuperadminSeeded(env: Bindings) {
       .set({ role: 'superadmin', status: 'approved', mustChangePassword: true })
       .where(eq(schema.user.email, adminEmail));
     console.log('[Seeding] Superadmin seeded successfully.');
-  } catch (err: any) {
+  } catch {
     console.error('[Seeding] Superadmin seeding failed');
   }
 }
