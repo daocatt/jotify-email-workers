@@ -48,12 +48,13 @@ routes.post('/api/public/send-code', async (c) => {
     }
   }
 
-  const codeBuffer = new Uint8Array(4);
+  const codeBuffer = new Uint8Array(6);
   crypto.getRandomValues(codeBuffer);
-  const code = (codeBuffer[0] % 10).toString() + (codeBuffer[1] % 10).toString() + (codeBuffer[2] % 10).toString() + (codeBuffer[3] % 10).toString() + (Date.now() % 10).toString() + ((Date.now() >>> 4) % 10).toString();
+  const code = Array.from(codeBuffer).map(b => (b % 10).toString()).join('');
   const expiresAt = new Date(Date.now() + 3 * 60 * 1000);
 
   await db.delete(schema.verification).where(eq(schema.verification.identifier, identifier));
+  await db.delete(schema.codeAttempts).where(eq(schema.codeAttempts.identifier, identifier));
   await db.insert(schema.verification).values({
     id: crypto.randomUUID(),
     identifier,

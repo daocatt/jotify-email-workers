@@ -57,13 +57,15 @@ routes.delete('/api/webhooks/:id', async (c) => {
   const ruleCount = await db.select({ count: sql<number>`count(*)` }).from(schema.webhookRules)
     .where(eq(schema.webhookRules.webhookId, id)).then(r => r[0]?.count || 0);
 
-  const confirm = c.req.query('confirm');
-  if (confirm !== 'true') {
-    return c.json({
-      error: 'This webhook has associated rules that will be cascade-deleted',
-      webhookRules: ruleCount,
-      confirmRequired: true,
-    }, 409);
+  if (ruleCount > 0) {
+    const confirm = c.req.query('confirm');
+    if (confirm !== 'true') {
+      return c.json({
+        error: 'This webhook has associated rules that will be cascade-deleted',
+        webhookRules: ruleCount,
+        confirmRequired: true,
+      }, 409);
+    }
   }
 
   await db.delete(schema.webhooks).where(eq(schema.webhooks.id, id));

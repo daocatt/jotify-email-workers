@@ -7,7 +7,7 @@ export function getAuth(d1: D1Database, secret: string, baseUrl: string) {
   const db = getDb(d1);
   const origins: string[] = [];
   if (baseUrl) origins.push(baseUrl);
-  if (baseUrl && !baseUrl.includes('localhost')) {
+  if (baseUrl && (baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1'))) {
     origins.push('http://localhost:5173', 'http://localhost:8787');
   }
   return betterAuth({
