@@ -499,6 +499,31 @@ export default function Dashboard({ user, config, onLogout, forceChangePassword,
     }
   };
 
+  const resetUserPassword = async (id: string, email: string) => {
+    const newPassword = prompt(`为 ${email} 设置新密码（至少8位，须包含大写、小写字母和数字）：`);
+    if (!newPassword) return;
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(newPassword)) {
+      alert('密码不符合要求（至少8位，且包含大小写字母和数字）');
+      return;
+    }
+    try {
+      const res = await fetch(`/api/admin/users/${id}/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: newPassword }),
+      });
+      if (res.ok) {
+        alert('密码已重置，该用户下次登录时需修改密码');
+        fetchDashboardData();
+      } else {
+        const data = await res.json() as any;
+        alert(`重置失败: ${data.error || '未知错误'}`);
+      }
+    } catch {
+      alert('网络错误');
+    }
+  };
+
   const obscureToken = (authType: string, token: string | null) => {
     if (!token) return '无 (None)';
     if (authType === 'bearer') {
@@ -1472,6 +1497,13 @@ export default function Dashboard({ user, config, onLogout, forceChangePassword,
                                 </button>
                               </>
                             )}
+                            <button
+                              onClick={() => resetUserPassword(u.id, u.email)}
+                              className="px-2.5 py-1 bg-gray-50 border border-gray-200 hover:bg-gray-100 text-gray-700 font-semibold rounded-md cursor-pointer transition-colors"
+                              title="重置该用户密码"
+                            >
+                              重置密码
+                            </button>
                           </td>
                         </tr>
                       ))
@@ -1573,12 +1605,21 @@ export default function Dashboard({ user, config, onLogout, forceChangePassword,
                           <td className="px-4 py-3 font-mono">{u.status}</td>
                           <td className="px-4 py-3 text-right">
                             {u.role !== 'superadmin' && (
-                              <button
-                                onClick={() => deleteUser(u.id)}
-                                className="text-red-500 hover:text-red-700 cursor-pointer"
-                              >
-                                <Trash2 className="h-4 w-4 inline" />
-                              </button>
+                              <>
+                                <button
+                                  onClick={() => resetUserPassword(u.id, u.email)}
+                                  className="text-gray-500 hover:text-black mr-3 cursor-pointer"
+                                  title="重置密码"
+                                >
+                                  <Key className="h-4 w-4 inline" />
+                                </button>
+                                <button
+                                  onClick={() => deleteUser(u.id)}
+                                  className="text-red-500 hover:text-red-700 cursor-pointer"
+                                >
+                                  <Trash2 className="h-4 w-4 inline" />
+                                </button>
+                              </>
                             )}
                           </td>
                         </tr>
