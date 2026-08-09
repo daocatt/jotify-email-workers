@@ -179,7 +179,7 @@ export async function handleEmail(message: ForwardableEmailMessage, env: Binding
 
           let attachmentUrl: string;
           try {
-            const signedUrlObj = await (env.ATTACHMENT_BUCKET as any).createSignedUrl(r2Key, 3600);
+            const signedUrlObj = await (env.ATTACHMENT_BUCKET as any).createSignedUrl(r2Key, 60 * 24 * 3600);
             if (signedUrlObj) {
               attachmentUrl = signedUrlObj;
             } else {
