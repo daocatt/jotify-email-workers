@@ -79,3 +79,13 @@ export interface AdminUser {
   mustChangePassword?: boolean;
   createdAt: string;
 }
+
+export interface FailedWebhook {
+  id: number;
+  webhookId: number;
+  webhookName: string | null;
+  url: string;
+  deliveryId: string;
+  attempts: number;
+  createdAt: string;
+}

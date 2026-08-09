@@ -16,6 +16,7 @@ import destinationRoutes from './routes/destinations';
 import forwardRuleRoutes from './routes/forward-rules';
 import webhookRoutes from './routes/webhooks';
 import webhookRuleRoutes from './routes/webhook-rules';
+import failedWebhookRoutes from './routes/failed-webhooks';
 import adminRoutes from './routes/admin';
 
 const app = new Hono<Env>();
@@ -176,6 +177,7 @@ app.route('/', destinationRoutes);
 app.route('/', forwardRuleRoutes);
 app.route('/', webhookRoutes);
 app.route('/', webhookRuleRoutes);
+app.route('/', failedWebhookRoutes);
 app.route('/', adminRoutes);
 
 export { RateLimiterDO } from './rate-limiter-do';

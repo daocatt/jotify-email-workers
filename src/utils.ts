@@ -195,3 +195,42 @@ export async function signWebhookPayload(payload: unknown, secret: string): Prom
   const sig = await crypto.subtle.sign('HMAC', key, data);
   return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
+
+/** Build the outgoing headers for a webhook delivery (signing + auth). */
+export async function buildWebhookHeaders(
+  webhook: { authType: string; authToken: string | null },
+  payload: unknown,
+  env: { WEBHOOK_SIGNING_SECRET?: string },
+): Promise<Record<string, string>> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (env.WEBHOOK_SIGNING_SECRET) {
+    const sig = await signWebhookPayload(payload, env.WEBHOOK_SIGNING_SECRET);
+    headers['X-Jotify-Signature'] = sig;
+    const deliveryId = (payload as any)?.delivery_id;
+    if (deliveryId) headers['X-Jotify-Delivery-Id'] = deliveryId;
+  }
+  if (webhook.authType === 'bearer' && webhook.authToken) {
+    headers['Authorization'] = `Bearer ${webhook.authToken}`;
+  } else if (webhook.authType === 'header' && webhook.authToken) {
+    const parts = webhook.authToken.split(':');
+    if (parts.length === 2) {
+      headers[parts[0].trim()] = parts[1].trim();
+    } else {
+      headers['X-Webhook-Token'] = webhook.authToken;
+    }
+  }
+  return headers;
+}
+
+/** Strip credential-bearing headers before persisting for visibility/retry. */
+export function sanitizeWebhookHeaders(headers: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(headers)) {
+    const lower = k.toLowerCase();
+    if (lower === 'authorization' || lower === 'x-webhook-token') continue;
+    out[k] = v;
+  }
+  return out;
+}

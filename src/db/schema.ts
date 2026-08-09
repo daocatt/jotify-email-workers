@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 // ── Better Auth Tables ───────────────────────────────────────────────────────
 
@@ -178,6 +178,7 @@ export const failedWebhooks = sqliteTable('failed_webhooks', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   userId: text('userId').notNull().references(() => user.id, { onDelete: 'cascade' }),
   webhookId: integer('webhookId').notNull().references(() => webhooks.id, { onDelete: 'cascade' }),
+  deliveryId: text('deliveryId').notNull(),
   url: text('url').notNull(),
   headers: text('headers').notNull(),
   payload: text('payload').notNull(),
@@ -188,6 +189,7 @@ export const failedWebhooks = sqliteTable('failed_webhooks', {
   return {
     userIdIdx: index('failed_webhooks_user_id_idx').on(table.userId),
     webhookIdIdx: index('failed_webhooks_webhook_id_idx').on(table.webhookId),
+    deliveryIdUniqueIdx: uniqueIndex('failed_webhooks_delivery_id_unique_idx').on(table.deliveryId),
   };
 });
 

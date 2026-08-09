@@ -9,7 +9,7 @@ import {
   deliverOnce,
   RetryMessage,
 } from './retry';
-import { Bindings, hashShortKey, maskEmail, signWebhookPayload, validateRegexPattern, safeRegexTest } from './utils';
+import { Bindings, hashShortKey, maskEmail, validateRegexPattern, safeRegexTest, buildWebhookHeaders, sanitizeWebhookHeaders } from './utils';
 
 async function streamToArrayBuffer(stream: ReadableStream, size: number): Promise<ArrayBuffer> {
   const reader = stream.getReader();
@@ -224,24 +224,7 @@ export async function handleEmail(message: ForwardableEmailMessage, env: Binding
           delivery_id: webhookIdempotencyKey,
         };
 
-        const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
-        };
-        if (env.WEBHOOK_SIGNING_SECRET) {
-          const sig = await signWebhookPayload(payload, env.WEBHOOK_SIGNING_SECRET);
-          headers['X-Jotify-Signature'] = sig;
-          headers['X-Jotify-Delivery-Id'] = webhookIdempotencyKey;
-        }
-        if (w.webhook.authType === 'bearer' && w.webhook.authToken) {
-          headers['Authorization'] = `Bearer ${w.webhook.authToken}`;
-        } else if (w.webhook.authType === 'header' && w.webhook.authToken) {
-          const parts = w.webhook.authToken.split(':');
-          if (parts.length === 2) {
-            headers[parts[0].trim()] = parts[1].trim();
-          } else {
-            headers['X-Webhook-Token'] = w.webhook.authToken;
-          }
-        }
+        const headers = await buildWebhookHeaders(w.webhook, payload, env);
 
         ctx.waitUntil((async () => {
           const success = await deliverWebhookWithRetry(w.webhook.url, headers, payload, 2, 15000);
@@ -282,6 +265,7 @@ export async function handleQueue(batch: MessageBatch<RetryMessage>, env: Bindin
   if (batch.queue === 'jotify-email-dlq') {
     for (const msg of batch.messages) {
       console.warn(`[DLQ] Discarding exhausted message: kind=${msg.body.kind}, key=${msg.body.idempotencyKey}, attempts=${msg.attempts}`);
+      await persistFailedWebhook(env, msg);
     }
     batch.ackAll();
     return;
@@ -298,5 +282,45 @@ export async function handleQueue(batch: MessageBatch<RetryMessage>, env: Bindin
     } catch {
       msg.retry({ delaySeconds: backoffSeconds(msg.attempts) });
     }
+  }
+}
+
+async function persistFailedWebhook(env: Bindings, msg: Message<RetryMessage>): Promise<void> {
+  if (msg.body.kind !== 'webhook') return;
+  const payloadBody = (msg.body.payload?.body || {}) as any;
+  const deliveryId = payloadBody?.delivery_id;
+  if (!deliveryId) return;
+
+  const m = /^jotify\/webhook\/(\d+)\//.exec(deliveryId);
+  const webhookId = m ? parseInt(m[1], 10) : null;
+  if (!webhookId) return;
+
+  const db = getDb(env.DB);
+  const webhook = await db.select({
+    userId: schema.webhooks.userId,
+    url: schema.webhooks.url,
+    authType: schema.webhooks.authType,
+    authToken: schema.webhooks.authToken,
+  }).from(schema.webhooks).where(eq(schema.webhooks.id, webhookId)).then(r => r[0]);
+
+  if (!webhook) {
+    console.warn(`[DLQ] Webhook ${webhookId} no longer exists, skipping persistence for ${deliveryId}`);
+    return;
+  }
+
+  try {
+    await db.insert(schema.failedWebhooks).values({
+      userId: webhook.userId,
+      webhookId,
+      deliveryId,
+      url: webhook.url,
+      headers: JSON.stringify(sanitizeWebhookHeaders(msg.body.payload?.headers || {})),
+      payload: JSON.stringify(payloadBody),
+      attempts: msg.attempts,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }).onConflictDoNothing({ target: schema.failedWebhooks.deliveryId });
+  } catch (err) {
+    console.error(`[DLQ] Failed to persist failed webhook ${deliveryId}:`, err);
   }
 }
