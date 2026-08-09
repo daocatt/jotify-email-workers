@@ -43,6 +43,14 @@ app.use('*', cors({
 }));
 
 app.use('*', async (c, next) => {
+  await next();
+  c.header('X-Content-Type-Options', 'nosniff');
+  c.header('X-Frame-Options', 'DENY');
+  c.header('Referrer-Policy', 'no-referrer');
+  c.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+});
+
+app.use('*', async (c, next) => {
   const ip = c.req.header('cf-connecting-ip') || 'unknown';
   if (!c.env.RATE_LIMITER) {
     await next();
