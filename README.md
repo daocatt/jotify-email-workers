@@ -40,6 +40,7 @@
 | `R2_PUBLIC_URL` | 否 | `https://cdn.domain.com` | R2 存储桶绑定的公网访问域名（若需要启用 Webhook 附件转发，则必须配置）。 |
 | `TURNSTILE_SITE_KEY` | 否 | `3x0000...` | Cloudflare Turnstile 人机验证 Site Key，留空则不启用登录/注册验证码。 |
 | `TURNSTILE_SECRET_KEY` | 否 | `1x0000...` | Cloudflare Turnstile 人机验证 Secret Key，留空则不启用。 |
+| `WEBHOOK_SIGNING_SECRET` | 否 | *(随机32位十六进制字符串)* | Webhook 投递签名密钥。设置后所有 Webhook 请求会附带 `X-Jotify-Signature`（HMAC-SHA256）和 `X-Jotify-Delivery-Id` 请求头，接收方可用其验签并做幂等去重。可用 `openssl rand -hex 32` 生成。 |
 
 ---
 

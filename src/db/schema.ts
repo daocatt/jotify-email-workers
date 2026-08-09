@@ -10,11 +10,7 @@ export const user = sqliteTable('user', {
   image: text('image'),
   role: text('role').notNull().default('user'), // 'user', 'admin', 'superadmin'
   status: text('status').notNull().default('pending'), // 'pending', 'approved', 'rejected'
-  resetToken: text('resetToken'),
-  resetTokenExpires: integer('resetTokenExpires'),
   mustChangePassword: integer('mustChangePassword', { mode: 'boolean' }).notNull().default(false),
-  tgToken: text('tgToken'),
-  tgChatId: text('tgChatId'),
   createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull(),
 });
