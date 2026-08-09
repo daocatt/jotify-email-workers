@@ -25,6 +25,11 @@
     }
   ],
   "workers_dev": false,
+  "triggers": {
+    "crons": [
+      "0 3 * * *"
+    ]
+  },
   "durable_objects": {
     "bindings": [
       {

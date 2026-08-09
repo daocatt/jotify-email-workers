@@ -182,8 +182,39 @@ app.route('/', adminRoutes);
 
 export { RateLimiterDO } from './rate-limiter-do';
 
+async function runCleanup(db: D1Database): Promise<void> {
+  const now = Date.now();
+  const day = 24 * 3600 * 1000;
+  const retentionIdempotency = new Date(now - 30 * day).toISOString();
+  const retentionAudit = now - 90 * day;
+  const retentionFailed = now - 30 * day;
+
+  const results: string[] = [];
+  const di = await db.prepare('DELETE FROM delivery_idempotency WHERE created_at < ?').bind(retentionIdempotency).run();
+  results.push(`delivery_idempotency=${di.meta.changes}`);
+  const al = await db.prepare('DELETE FROM audit_log WHERE createdAt < ?').bind(retentionAudit).run();
+  results.push(`audit_log=${al.meta.changes}`);
+  const fw = await db.prepare('DELETE FROM failed_webhooks WHERE createdAt < ?').bind(retentionFailed).run();
+  results.push(`failed_webhooks=${fw.meta.changes}`);
+  const v = await db.prepare('DELETE FROM verification WHERE expiresAt < ?').bind(now).run();
+  results.push(`verification=${v.meta.changes}`);
+  const ca = await db.prepare('DELETE FROM code_attempts WHERE expiresAt < ?').bind(now).run();
+  results.push(`code_attempts=${ca.meta.changes}`);
+
+  console.log(`[Cleanup] ${results.join(', ')}`);
+}
+
 export default {
   fetch: app.fetch,
+
+  async scheduled(controller: ScheduledController, env: Bindings, ctx: ExecutionContext): Promise<void> {
+    console.log(`[Cleanup] Running scheduled cleanup (cron: ${controller.cron})`);
+    try {
+      await runCleanup(env.DB);
+    } catch (err) {
+      console.error('[Cleanup] Failed:', err);
+    }
+  },
 
   async email(message: ForwardableEmailMessage, env: Bindings, ctx: ExecutionContext): Promise<void> {
     return handleEmail(message, env, ctx);
