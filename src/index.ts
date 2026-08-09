@@ -109,6 +109,22 @@ app.post('/api/auth/sign-in/email', async (c, next) => {
   await next();
 });
 
+app.post('/api/auth/sign-up/email', (c) => {
+  return c.json({ message: 'Registration is handled via /api/public/register' }, 404);
+});
+
+app.post('/api/auth/request-password-reset', (c) => {
+  return c.json({ message: 'Password reset is handled via /api/public/reset-password' }, 404);
+});
+
+app.post('/api/auth/reset-password', (c) => {
+  return c.json({ message: 'Password reset is handled via /api/public/reset-password' }, 404);
+});
+
+app.get('/api/auth/reset-password/:token', (c) => {
+  return c.json({ message: 'Password reset is handled via /api/public/reset-password' }, 404);
+});
+
 app.on(['GET', 'POST'], '/api/auth/*', async (c) => {
   const auth = getAuth(c.env.DB, c.env.BETTER_AUTH_SECRET, c.env.BETTER_AUTH_URL);
   return auth.handler(c.req.raw);
