@@ -23,6 +23,10 @@ export default function Register({ config, setView }: RegisterProps) {
       setAuthError('请先输入电子邮箱');
       return;
     }
+    if (config.turnstileSiteKey && !turnstileToken) {
+      setAuthError('请先完成人机验证');
+      return;
+    }
     if (sendCodeLoading || isSubmitting) return;
     setAuthError('');
     setAuthSuccess('');
@@ -31,7 +35,7 @@ export default function Register({ config, setView }: RegisterProps) {
       const res = await fetch('/api/public/send-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, type: 'register' }),
+        body: JSON.stringify({ email, type: 'register', turnstileToken }),
       });
       const data = await res.json() as any;
       if (res.ok) {
