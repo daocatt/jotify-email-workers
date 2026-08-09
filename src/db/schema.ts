@@ -143,7 +143,7 @@ export const webhookRules = sqliteTable('webhook_rules', {
 
 export const deliveryIdempotency = sqliteTable('delivery_idempotency', {
   idempotencyKey: text('idempotency_key').primaryKey(),
-  status: text('status').notNull(), // 'pending' | 'sent' | 'failed'
+  status: text('status').notNull(), // 'pending' | 'sent' | 'rejected' | 'failed'
   createdAt: text('created_at').notNull(),
 }, (table) => {
   return {
