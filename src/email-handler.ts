@@ -41,6 +41,15 @@ function stripHtml(html: string): string {
     .trim();
 }
 
+async function markDeliveryStatus(db: D1Database, key: string, status: string): Promise<void> {
+  try {
+    await db.prepare('UPDATE delivery_idempotency SET status = ? WHERE idempotency_key = ?')
+      .bind(status, key).run();
+  } catch {
+    console.warn('[Email Worker] Failed to update delivery idempotency status');
+  }
+}
+
 export async function handleEmail(message: ForwardableEmailMessage, env: Bindings, ctx: ExecutionContext): Promise<void> {
   const to = message.to.toLowerCase().trim();
   const from = message.from.toLowerCase().trim();
@@ -77,7 +86,7 @@ export async function handleEmail(message: ForwardableEmailMessage, env: Binding
     : `h:${await hashShortKey(`${from}|${to}|${dateHeader}`)}`;
   try {
     const inserted = await env.DB.prepare(`
-      INSERT OR IGNORE INTO delivery_idempotency (idempotency_key, status, created_at) VALUES (?, 'sent', ?)
+      INSERT OR IGNORE INTO delivery_idempotency (idempotency_key, status, created_at) VALUES (?, 'pending', ?)
     `).bind(dedupKey, new Date().toISOString()).run();
     if (!inserted?.meta?.changes) {
       console.log(`[Email Worker] Duplicate inbound message ${dedupKey}, already processed. Skipping.`);
@@ -90,176 +99,183 @@ export async function handleEmail(message: ForwardableEmailMessage, env: Binding
   const deliveryUuid = crypto.randomUUID();
   const username = to.split('@')[0];
 
-  const [allForwardRules, allWebhookRules] = await Promise.all([
-    db.select({
-      rule: schema.forwardRules,
-      domain: schema.domains.domain,
-      destination: schema.destinations.email,
-    })
-    .from(schema.forwardRules)
-    .innerJoin(schema.domains, eq(schema.forwardRules.domainId, schema.domains.id))
-    .innerJoin(schema.destinations, eq(schema.forwardRules.destinationId, schema.destinations.id))
-    .where(eq(schema.forwardRules.userId, matchedDomain.userId)),
+  try {
+    const [allForwardRules, allWebhookRules] = await Promise.all([
+      db.select({
+        rule: schema.forwardRules,
+        domain: schema.domains.domain,
+        destination: schema.destinations.email,
+      })
+      .from(schema.forwardRules)
+      .innerJoin(schema.domains, eq(schema.forwardRules.domainId, schema.domains.id))
+      .innerJoin(schema.destinations, eq(schema.forwardRules.destinationId, schema.destinations.id))
+      .where(eq(schema.forwardRules.userId, matchedDomain.userId)),
 
-    db.select({
-      rule: schema.webhookRules,
-      domain: schema.domains.domain,
-      webhook: schema.webhooks,
-    })
-    .from(schema.webhookRules)
-    .innerJoin(schema.domains, eq(schema.webhookRules.domainId, schema.domains.id))
-    .innerJoin(schema.webhooks, eq(schema.webhookRules.webhookId, schema.webhooks.id))
-    .where(eq(schema.webhookRules.userId, matchedDomain.userId)),
-  ]);
+      db.select({
+        rule: schema.webhookRules,
+        domain: schema.domains.domain,
+        webhook: schema.webhooks,
+      })
+      .from(schema.webhookRules)
+      .innerJoin(schema.domains, eq(schema.webhookRules.domainId, schema.domains.id))
+      .innerJoin(schema.webhooks, eq(schema.webhookRules.webhookId, schema.webhooks.id))
+      .where(eq(schema.webhookRules.userId, matchedDomain.userId)),
+    ]);
 
-  let ruleMatched = false;
-  for (const r of allForwardRules) {
-    if (parsedDomain !== r.domain && !parsedDomain.endsWith('.' + r.domain)) continue;
-    if (r.rule.subdomain) {
-      const expectedSub = parsedDomain.replace('.' + r.domain, '');
-      if (expectedSub !== r.rule.subdomain) continue;
+    let ruleMatched = false;
+    for (const r of allForwardRules) {
+      if (parsedDomain !== r.domain && !parsedDomain.endsWith('.' + r.domain)) continue;
+      if (r.rule.subdomain) {
+        const expectedSub = parsedDomain.replace('.' + r.domain, '');
+        if (expectedSub !== r.rule.subdomain) continue;
+      }
+      const regexErr = validateRegexPattern(r.rule.usernamePattern);
+      if (regexErr) {
+        console.error(`[Email Worker] Invalid regex pattern in forward rule: ${regexErr}`);
+        continue;
+      }
+      const matched = safeRegexTest(r.rule.usernamePattern, username);
+      if (matched) {
+        try {
+          console.log(`[Email Worker] Match forwarding rule! Forwarding to: ${maskEmail(r.destination)}`);
+          await message.forward(r.destination);
+          ruleMatched = true;
+        } catch (err) {
+          console.error(`[Email Worker] Forward failed for ${maskEmail(to)} to ${maskEmail(r.destination)}:`, err);
+        }
+      }
     }
-    const regexErr = validateRegexPattern(r.rule.usernamePattern);
-    if (regexErr) {
-      console.error(`[Email Worker] Invalid regex pattern in forward rule: ${regexErr}`);
-      continue;
-    }
-    const matched = safeRegexTest(r.rule.usernamePattern, username);
-    if (matched) {
+
+    let webhookMatched = false;
+    let rawEmail: ArrayBuffer | null = null;
+
+    for (const w of allWebhookRules) {
+      if (parsedDomain !== w.domain && !parsedDomain.endsWith('.' + w.domain)) continue;
+      if (w.rule.subdomain) {
+        const expectedSub = parsedDomain.replace('.' + w.domain, '');
+        if (expectedSub !== w.rule.subdomain) continue;
+      }
+      const regexErr = validateRegexPattern(w.rule.usernamePattern);
+      if (regexErr) {
+        console.error(`[Email Worker] Invalid regex pattern in webhook rule: ${regexErr}`);
+        continue;
+      }
+      const matched = safeRegexTest(w.rule.usernamePattern, username);
+      if (!matched) continue;
+
       try {
-        console.log(`[Email Worker] Match forwarding rule! Forwarding to: ${maskEmail(r.destination)}`);
-        await message.forward(r.destination);
-        ruleMatched = true;
-      } catch (err) {
-        console.error(`[Email Worker] Forward failed for ${maskEmail(to)} to ${maskEmail(r.destination)}:`, err);
-      }
-    }
-  }
+        console.log(`[Email Worker] Match webhook rule! Triggering HTTP POST to: ${w.webhook.url.replace(/\/\/[^@]+@/, '//***@')}`);
 
-  let webhookMatched = false;
-  let rawEmail: ArrayBuffer | null = null;
+        if (!rawEmail) {
+          rawEmail = await streamToArrayBuffer(message.raw, message.rawSize);
+        }
 
-  for (const w of allWebhookRules) {
-    if (parsedDomain !== w.domain && !parsedDomain.endsWith('.' + w.domain)) continue;
-    if (w.rule.subdomain) {
-      const expectedSub = parsedDomain.replace('.' + w.domain, '');
-      if (expectedSub !== w.rule.subdomain) continue;
-    }
-    const regexErr = validateRegexPattern(w.rule.usernamePattern);
-    if (regexErr) {
-      console.error(`[Email Worker] Invalid regex pattern in webhook rule: ${regexErr}`);
-      continue;
-    }
-    const matched = safeRegexTest(w.rule.usernamePattern, username);
-    if (!matched) continue;
+        const parser = new PostalMime();
+        const parsed = await parser.parse(rawEmail);
+        const subject = parsed.subject || '';
+        const text = parsed.text || stripHtml(parsed.html || '');
 
-    try {
-      console.log(`[Email Worker] Match webhook rule! Triggering HTTP POST to: ${w.webhook.url.replace(/\/\/[^@]+@/, '//***@')}`);
-      
-      if (!rawEmail) {
-        rawEmail = await streamToArrayBuffer(message.raw, message.rawSize);
-      }
+        const attachmentUrls: Array<{ filename: string; mimeType: string; size: number; url: string }> = [];
+        if (env.ATTACHMENT_BUCKET && env.R2_PUBLIC_URL && parsed.attachments && parsed.attachments.length > 0) {
+          for (const att of parsed.attachments) {
+            const dateStr = new Date().toISOString().slice(0, 7).replace('-', '');
+            const uniqueId = crypto.randomUUID();
+            const safeFilename = att.filename ? att.filename.replace(/[^a-zA-Z0-9.\-_]/g, '_') : 'unnamed';
+            const r2Key = `${dateStr}/${uniqueId}/${safeFilename}`;
 
-      const parser = new PostalMime();
-      const parsed = await parser.parse(rawEmail);
-      const subject = parsed.subject || '';
-      const text = parsed.text || stripHtml(parsed.html || '');
+            await env.ATTACHMENT_BUCKET.put(r2Key, att.content, {
+              httpMetadata: {
+                contentType: att.mimeType || 'application/octet-stream',
+                contentDisposition: `attachment; filename*=UTF-8''${encodeURIComponent(att.filename || 'attachment')}`
+              }
+            });
 
-      const attachmentUrls: Array<{ filename: string; mimeType: string; size: number; url: string }> = [];
-      if (env.ATTACHMENT_BUCKET && env.R2_PUBLIC_URL && parsed.attachments && parsed.attachments.length > 0) {
-        for (const att of parsed.attachments) {
-          const dateStr = new Date().toISOString().slice(0, 7).replace('-', '');
-          const uniqueId = crypto.randomUUID();
-          const safeFilename = att.filename ? att.filename.replace(/[^a-zA-Z0-9.\-_]/g, '_') : 'unnamed';
-          const r2Key = `${dateStr}/${uniqueId}/${safeFilename}`;
-          
-          await env.ATTACHMENT_BUCKET.put(r2Key, att.content, {
-            httpMetadata: {
-              contentType: att.mimeType || 'application/octet-stream',
-              contentDisposition: `attachment; filename*=UTF-8''${encodeURIComponent(att.filename || 'attachment')}`
-            }
-          });
-
-          let attachmentUrl: string;
-          try {
-            const signedUrlObj = await (env.ATTACHMENT_BUCKET as any).createSignedUrl(r2Key, 3600);
-            if (signedUrlObj) {
-              attachmentUrl = signedUrlObj;
-            } else {
-              console.warn(`[Email Worker] Signed URL not available for ${r2Key}, skipping attachment URL`);
+            let attachmentUrl: string;
+            try {
+              const signedUrlObj = await (env.ATTACHMENT_BUCKET as any).createSignedUrl(r2Key, 3600);
+              if (signedUrlObj) {
+                attachmentUrl = signedUrlObj;
+              } else {
+                console.warn(`[Email Worker] Signed URL not available for ${r2Key}, skipping attachment URL`);
+                continue;
+              }
+            } catch {
+              console.warn(`[Email Worker] Failed to create signed URL for ${r2Key}, skipping attachment URL`);
               continue;
             }
-          } catch {
-            console.warn(`[Email Worker] Failed to create signed URL for ${r2Key}, skipping attachment URL`);
-            continue;
-          }
 
-          attachmentUrls.push({
-            filename: att.filename || 'unnamed',
-            mimeType: att.mimeType || 'application/octet-stream',
-            size: typeof att.content === 'string' ? att.content.length : (att.content as ArrayBuffer).byteLength,
-            url: attachmentUrl
-          });
-        }
-      }
-
-      const webhookIdempotencyKey = `jotify/webhook/${w.webhook.id}/${deliveryUuid}`;
-      const payload = {
-        to: to,
-        from: from,
-        subject,
-        text,
-        rawSize: message.rawSize,
-        attachments: attachmentUrls,
-        delivery_id: webhookIdempotencyKey,
-      };
-
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-      if (env.WEBHOOK_SIGNING_SECRET) {
-        const sig = await signWebhookPayload(payload, env.WEBHOOK_SIGNING_SECRET);
-        headers['X-Jotify-Signature'] = sig;
-        headers['X-Jotify-Delivery-Id'] = webhookIdempotencyKey;
-      }
-      if (w.webhook.authType === 'bearer' && w.webhook.authToken) {
-        headers['Authorization'] = `Bearer ${w.webhook.authToken}`;
-      } else if (w.webhook.authType === 'header' && w.webhook.authToken) {
-        const parts = w.webhook.authToken.split(':');
-        if (parts.length === 2) {
-          headers[parts[0].trim()] = parts[1].trim();
-        } else {
-          headers['X-Webhook-Token'] = w.webhook.authToken;
-        }
-      }
-
-      ctx.waitUntil((async () => {
-        const success = await deliverWebhookWithRetry(w.webhook.url, headers, payload, 2, 15000);
-        if (!success) {
-          try {
-            await enqueueRetry(env, {
-              kind: 'webhook',
-              idempotencyKey: webhookIdempotencyKey,
-              payload: { url: w.webhook.url, headers, body: payload },
+            attachmentUrls.push({
+              filename: att.filename || 'unnamed',
+              mimeType: att.mimeType || 'application/octet-stream',
+              size: typeof att.content === 'string' ? att.content.length : (att.content as ArrayBuffer).byteLength,
+              url: attachmentUrl
             });
-          } catch (enqueueErr: any) {
-            console.error(`[Email Worker] Failed to enqueue retry:`, enqueueErr.message || enqueueErr);
           }
         }
-      })());
 
-      webhookMatched = true;
-    } catch (err) {
-      console.error(`[Email Worker] Webhook delivery error for rule ${w.rule.usernamePattern}:`, err);
+        const webhookIdempotencyKey = `jotify/webhook/${w.webhook.id}/${deliveryUuid}`;
+        const payload = {
+          to: to,
+          from: from,
+          subject,
+          text,
+          rawSize: message.rawSize,
+          attachments: attachmentUrls,
+          delivery_id: webhookIdempotencyKey,
+        };
+
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+        if (env.WEBHOOK_SIGNING_SECRET) {
+          const sig = await signWebhookPayload(payload, env.WEBHOOK_SIGNING_SECRET);
+          headers['X-Jotify-Signature'] = sig;
+          headers['X-Jotify-Delivery-Id'] = webhookIdempotencyKey;
+        }
+        if (w.webhook.authType === 'bearer' && w.webhook.authToken) {
+          headers['Authorization'] = `Bearer ${w.webhook.authToken}`;
+        } else if (w.webhook.authType === 'header' && w.webhook.authToken) {
+          const parts = w.webhook.authToken.split(':');
+          if (parts.length === 2) {
+            headers[parts[0].trim()] = parts[1].trim();
+          } else {
+            headers['X-Webhook-Token'] = w.webhook.authToken;
+          }
+        }
+
+        ctx.waitUntil((async () => {
+          const success = await deliverWebhookWithRetry(w.webhook.url, headers, payload, 2, 15000);
+          if (!success) {
+            try {
+              await enqueueRetry(env, {
+                kind: 'webhook',
+                idempotencyKey: webhookIdempotencyKey,
+                payload: { url: w.webhook.url, headers, body: payload },
+              });
+            } catch (enqueueErr: any) {
+              console.error(`[Email Worker] Failed to enqueue retry:`, enqueueErr.message || enqueueErr);
+            }
+          }
+        })());
+
+        webhookMatched = true;
+      } catch (err) {
+        console.error(`[Email Worker] Webhook delivery error for rule ${w.rule.usernamePattern}:`, err);
+      }
     }
-  }
 
-  if (ruleMatched || webhookMatched) {
-    return;
-  }
+    if (ruleMatched || webhookMatched) {
+      await markDeliveryStatus(env.DB, dedupKey, 'sent');
+      return;
+    }
 
-  console.warn(`[Email Worker] No rule matched for ${maskEmail(to)}, rejecting.`);
-  message.setReject('Address not allowed');
+    console.warn(`[Email Worker] No rule matched for ${maskEmail(to)}, rejecting.`);
+    message.setReject('Address not allowed');
+    await markDeliveryStatus(env.DB, dedupKey, 'rejected');
+  } catch (err) {
+    console.error(`[Email Worker] Inbound processing error for ${maskEmail(to)}:`, err);
+    await markDeliveryStatus(env.DB, dedupKey, 'failed');
+  }
 }
 
 export async function handleQueue(batch: MessageBatch<RetryMessage>, env: Bindings, ctx: ExecutionContext): Promise<void> {
