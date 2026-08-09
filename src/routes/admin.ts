@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { eq, or } from 'drizzle-orm';
+import { hashPassword } from 'better-auth/crypto';
 import * as schema from '../db/schema';
 import { getDb } from '../db';
 import { getAuth } from '../auth';
@@ -152,6 +153,53 @@ routes.post('/api/admin/add-admin', async (c) => {
   } catch {
     return c.json({ error: 'Failed to create admin user' }, 400);
   }
+});
+
+routes.post('/api/admin/users/:id/reset-password', async (c) => {
+  const session = await getSessionUser(c);
+  if (!session || (session.dbUser.role !== 'admin' && session.dbUser.role !== 'superadmin')) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const targetId = c.req.param('id');
+  const { password } = await c.req.json();
+  if (!password) {
+    return c.json({ error: 'New password is required' }, 400);
+  }
+  const pwdErr = validatePasswordStrength(password);
+  if (pwdErr) {
+    return c.json({ error: pwdErr }, 400);
+  }
+
+  const db = getDb(c.env.DB);
+  const target = await db.select().from(schema.user).where(eq(schema.user.id, targetId)).then(r => r[0]);
+  if (!target) {
+    return c.json({ error: 'User not found' }, 404);
+  }
+  if (target.role === 'superadmin') {
+    return c.json({ error: 'Cannot reset superadmin password' }, 400);
+  }
+  if (session.dbUser.role === 'admin' && target.role !== 'user') {
+    return c.json({ error: 'Admins can only reset regular user passwords' }, 400);
+  }
+
+  try {
+    const hashedPassword = await hashPassword(password);
+    await db.update(schema.account)
+      .set({ password: hashedPassword, updatedAt: new Date() })
+      .where(eq(schema.account.userId, targetId));
+    await db.delete(schema.session).where(eq(schema.session.userId, targetId));
+    await db.update(schema.user)
+      .set({ mustChangePassword: true, updatedAt: new Date() })
+      .where(eq(schema.user.id, targetId));
+  } catch {
+    return c.json({ error: 'Failed to reset password' }, 500);
+  }
+
+  const ip = c.req.header('cf-connecting-ip') || null;
+  await writeAuditLog(db, session.dbUser, 'reset_user_password', { id: targetId, email: target.email }, null, ip);
+
+  return c.json({ success: true });
 });
 
 routes.delete('/api/admin/users/:id', async (c) => {
