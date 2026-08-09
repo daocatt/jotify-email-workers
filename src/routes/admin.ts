@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { eq, or } from 'drizzle-orm';
+import { eq, or, and, sql, desc } from 'drizzle-orm';
 import { hashPassword } from 'better-auth/crypto';
 import * as schema from '../db/schema';
 import { getDb } from '../db';
@@ -31,32 +31,53 @@ routes.get('/api/admin/users', async (c) => {
     return c.json({ error: 'Unauthorized' }, 401);
   }
 
+  const page = Math.max(1, parseInt(c.req.query('page') || '1', 10) || 1);
+  const search = (c.req.query('search') || '').trim().toLowerCase();
+  const perPage = 20;
+
   const db = getDb(c.env.DB);
+  const searchFilter = search
+    ? or(
+        sql`lower(${schema.user.name}) LIKE ${'%' + search + '%'}`,
+        sql`lower(${schema.user.email}) LIKE ${'%' + search + '%'}`
+      )
+    : undefined;
+
+  const base = {
+    id: schema.user.id,
+    name: schema.user.name,
+    email: schema.user.email,
+    role: schema.user.role,
+    status: schema.user.status,
+    createdAt: schema.user.createdAt,
+  };
+
   if (session.dbUser.role === 'superadmin') {
-    const list = await db.select({
-      id: schema.user.id,
-      name: schema.user.name,
-      email: schema.user.email,
-      role: schema.user.role,
-      status: schema.user.status,
-      mustChangePassword: schema.user.mustChangePassword,
-      createdAt: schema.user.createdAt,
-    }).from(schema.user)
-    .where(or(eq(schema.user.role, 'user'), eq(schema.user.role, 'admin')));
-
-    return c.json({ users: list });
+    const where = and(
+      or(eq(schema.user.role, 'user'), eq(schema.user.role, 'admin')),
+      ...(searchFilter ? [searchFilter] : []),
+    );
+    const total = await db.select({ count: sql<number>`count(*)` }).from(schema.user)
+      .where(where).then(r => r[0]?.count || 0);
+    const list = await db.select({ ...base, mustChangePassword: schema.user.mustChangePassword }).from(schema.user)
+      .where(where)
+      .orderBy(desc(schema.user.createdAt))
+      .limit(perPage)
+      .offset((page - 1) * perPage);
+    return c.json({ users: list, total, page });
   } else {
-    const list = await db.select({
-      id: schema.user.id,
-      name: schema.user.name,
-      email: schema.user.email,
-      role: schema.user.role,
-      status: schema.user.status,
-      createdAt: schema.user.createdAt,
-    }).from(schema.user)
-    .where(eq(schema.user.role, 'user'));
-
-    return c.json({ users: list });
+    const where = and(
+      eq(schema.user.role, 'user'),
+      ...(searchFilter ? [searchFilter] : []),
+    );
+    const total = await db.select({ count: sql<number>`count(*)` }).from(schema.user)
+      .where(where).then(r => r[0]?.count || 0);
+    const list = await db.select(base).from(schema.user)
+      .where(where)
+      .orderBy(desc(schema.user.createdAt))
+      .limit(perPage)
+      .offset((page - 1) * perPage);
+    return c.json({ users: list, total, page });
   }
 });
 

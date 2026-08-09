@@ -29,6 +29,8 @@ export default function Dashboard({ user, config, onLogout, forceChangePassword,
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [webhookRules, setWebhookRules] = useState<WebhookRule[]>([]);
   const [usersList, setUsersList] = useState<AdminUser[]>([]);
+  const [usersTotal, setUsersTotal] = useState(0);
+  const [usersSearch, setUsersSearch] = useState('');
   const [failures, setFailures] = useState<FailedWebhook[]>([]);
   const [failuresTotal, setFailuresTotal] = useState(0);
 
@@ -93,6 +95,7 @@ export default function Dashboard({ user, config, onLogout, forceChangePassword,
     setWebhooksPage(1);
     setWebhookRulesPage(1);
     setUsersListPage(1);
+    setUsersSearch('');
     setFailuresPage(1);
     setFailuresSearch('');
     setForwardRulesSearch('');
@@ -129,8 +132,13 @@ export default function Dashboard({ user, config, onLogout, forceChangePassword,
           setWebhookRules(((await rRes.json()) as any).rules || []);
         }
       } else if (activeTab === 'admin' || activeTab === 'superadmin') {
-        const res = await fetch('/api/admin/users');
-        if (res.ok) setUsersList(((await res.json()) as any).users || []);
+        const query = `/api/admin/users?page=${usersListPage}${usersSearch ? `&search=${encodeURIComponent(usersSearch)}` : ''}`;
+        const res = await fetch(query);
+        if (res.ok) {
+          const data = await res.json() as any;
+          setUsersList(data.users || []);
+          setUsersTotal(data.total || 0);
+        }
       } else if (activeTab === 'failures') {
         const query = `/api/failed-webhooks?page=${failuresPage}${failuresSearch ? `&search=${encodeURIComponent(failuresSearch)}` : ''}`;
         const res = await fetch(query);
@@ -1447,9 +1455,25 @@ export default function Dashboard({ user, config, onLogout, forceChangePassword,
           {/* Admin tab (Registration review) */}
           {activeTab === 'admin' && isAdmin && (
             <div className="space-y-6">
-              <div>
-                <h3 className="text-base font-bold text-gray-900 font-serif">审核用户注册 (User Verification Panel)</h3>
-                <p className="text-xs text-gray-500 mt-1">审核新用户的注册申请，拒绝或通过激活账号。</p>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 font-serif">审核用户注册 (User Verification Panel)</h3>
+                  <p className="text-xs text-gray-500 mt-1">审核新用户的注册申请，拒绝或通过激活账号。</p>
+                </div>
+                <div className="relative w-full sm:w-64">
+                  <Search className="h-3.5 w-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="搜索用户名或邮箱..."
+                    value={usersSearch}
+                    onChange={(e) => {
+                      setUsersSearch(e.target.value);
+                      setUsersListPage(1);
+                      fetchDashboardData();
+                    }}
+                    className="w-full pl-8 pr-3 py-1.5 bg-white border border-gray-200 rounded text-xs focus:outline-none focus:border-black transition-colors"
+                  />
+                </div>
               </div>
 
               <div className="border border-gray-100 rounded overflow-hidden">
@@ -1516,8 +1540,8 @@ export default function Dashboard({ user, config, onLogout, forceChangePassword,
                 </table>
                 <PaginationControls
                   currentPage={usersListPage}
-                  totalItems={usersList.length}
-                  onPageChange={setUsersListPage}
+                  totalItems={usersTotal}
+                  onPageChange={(p) => { setUsersListPage(p); fetchDashboardData(); }}
                 />
               </div>
             </div>
@@ -1526,9 +1550,25 @@ export default function Dashboard({ user, config, onLogout, forceChangePassword,
           {/* Superadmin tab (Admin management) */}
           {activeTab === 'superadmin' && isSuperadmin && (
             <div className="space-y-6">
-              <div>
-                <h3 className="text-base font-bold text-gray-900 font-serif">管理员及用户管理 (Super Admin Controls)</h3>
-                <p className="text-xs text-gray-500 mt-1">添加系统管理员或注销用户账号。</p>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 font-serif">管理员及用户管理 (Super Admin Controls)</h3>
+                  <p className="text-xs text-gray-500 mt-1">添加系统管理员或注销用户账号。</p>
+                </div>
+                <div className="relative w-full sm:w-64">
+                  <Search className="h-3.5 w-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="搜索用户名或邮箱..."
+                    value={usersSearch}
+                    onChange={(e) => {
+                      setUsersSearch(e.target.value);
+                      setUsersListPage(1);
+                      fetchDashboardData();
+                    }}
+                    className="w-full pl-8 pr-3 py-1.5 bg-white border border-gray-200 rounded text-xs focus:outline-none focus:border-black transition-colors"
+                  />
+                </div>
               </div>
 
               <form onSubmit={addAdmin} className="bg-gray-50/50 border border-gray-150 rounded p-4 space-y-4 text-xs text-gray-700">
@@ -1633,8 +1673,8 @@ export default function Dashboard({ user, config, onLogout, forceChangePassword,
                 </table>
                 <PaginationControls
                   currentPage={usersListPage}
-                  totalItems={usersList.length}
-                  onPageChange={setUsersListPage}
+                  totalItems={usersTotal}
+                  onPageChange={(p) => { setUsersListPage(p); fetchDashboardData(); }}
                 />
               </div>
             </div>
