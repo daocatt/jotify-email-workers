@@ -50,6 +50,13 @@
       "when": 1786266952768,
       "tag": "0006_lovely_yellowjacket",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1786267765844,
+      "tag": "0007_slippery_firelord",
+      "breakpoints": true
     }
   ]
 }
