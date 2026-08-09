@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { eq, and } from 'drizzle-orm';
 import * as schema from '../db/schema';
 import { getDb } from '../db';
-import { Env, getSessionUser, validateRegexPattern } from '../utils';
+import { Env, getSessionUser, validateRegexPattern, validateSubdomain } from '../utils';
 
 const routes = new Hono<Env>();
 
@@ -26,6 +26,8 @@ routes.post('/api/forward-rules', async (c) => {
 
   const regexErr = validateRegexPattern(usernamePattern);
   if (regexErr) return c.json({ error: regexErr }, 400);
+  const subErr = validateSubdomain(subdomain);
+  if (subErr) return c.json({ error: subErr }, 400);
 
   const db = getDb(c.env.DB);
   const [ownDomain, ownDest] = await Promise.all([
@@ -77,6 +79,8 @@ routes.put('/api/forward-rules/:id', async (c) => {
 
   const regexErr = validateRegexPattern(usernamePattern);
   if (regexErr) return c.json({ error: regexErr }, 400);
+  const subErr = validateSubdomain(subdomain);
+  if (subErr) return c.json({ error: subErr }, 400);
 
   const db = getDb(c.env.DB);
   const [ownDomain, ownDest] = await Promise.all([
