@@ -11,9 +11,26 @@ const routes = new Hono<Env>();
 const MAX_CODE_ATTEMPTS = 5;
 
 routes.post('/api/public/send-code', async (c) => {
-  const { email, type } = await c.req.json();
+  const { email, type, turnstileToken } = await c.req.json();
   if (!email || !validateEmail(email)) return c.json({ error: 'Valid email is required' }, 400);
   if (type !== 'register' && type !== 'reset') return c.json({ error: 'Invalid type' }, 400);
+
+  if (c.env.TURNSTILE_SECRET_KEY) {
+    const ok = await verifyTurnstile(turnstileToken, c.env.TURNSTILE_SECRET_KEY);
+    if (!ok) {
+      return c.json({ error: 'Turnstile 验证失败' }, 400);
+    }
+  }
+
+  const ip = c.req.header('cf-connecting-ip') || 'unknown';
+  if (c.env.RATE_LIMITER) {
+    const id = c.env.RATE_LIMITER.idFromName(`sendcode:${ip}`);
+    const stub = c.env.RATE_LIMITER.get(id);
+    const result = await stub.check(ip, 5, 60_000);
+    if (!result.allowed) {
+      return c.json({ error: 'Too many requests' }, 429);
+    }
+  }
 
   const db = getDb(c.env.DB);
   const identifier = `email_code:${type}:${email.toLowerCase().trim()}`;
@@ -32,19 +49,15 @@ routes.post('/api/public/send-code', async (c) => {
   const existingUser = await db.select().from(schema.user).where(eq(schema.user.email, email.toLowerCase().trim())).then(r => r[0]);
 
   if (type === 'register') {
-    const allowRegister = c.env.ALLOW_REGISTER !== 'false';
-    if (!allowRegister) {
+    if (c.env.ALLOW_REGISTER === 'false') {
       return c.json({ error: 'Registration is closed' }, 400);
     }
     if (existingUser) {
-      return c.json({ error: 'Email already registered' }, 400);
+      return c.json({ success: true, message: 'Verification code sent' });
     }
   } else if (type === 'reset') {
-    if (!existingUser) {
-      return c.json({ error: 'Email not found' }, 404);
-    }
-    if (existingUser.role === 'superadmin') {
-      return c.json({ error: 'Superadmin password cannot be reset via email code' }, 400);
+    if (!existingUser || existingUser.role === 'superadmin') {
+      return c.json({ success: true, message: 'Verification code sent' });
     }
   }
 
