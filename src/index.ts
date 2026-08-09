@@ -93,20 +93,51 @@ app.use('*', async (c, next) => {
 });
 
 app.post('/api/auth/sign-in/email', async (c, next) => {
-  if (c.env.TURNSTILE_SECRET_KEY) {
-    try {
-      const bodyText = await c.req.text();
-      const body = JSON.parse(bodyText);
+  let bodyText = '';
+  let email = '';
+  try {
+    bodyText = await c.req.text();
+    const body = JSON.parse(bodyText);
+    email = (body.email || '').toLowerCase().trim();
+    if (c.env.TURNSTILE_SECRET_KEY) {
       const ok = await verifyTurnstile(body.turnstileToken, c.env.TURNSTILE_SECRET_KEY);
       if (!ok) {
         return c.json({ message: 'Turnstile 验证失败' }, 400);
       }
-      c.req.raw = new Request(c.req.raw, { body: bodyText });
-    } catch (err) {
-      return c.json({ message: '请求格式错误' }, 400);
+    }
+  } catch (err) {
+    return c.json({ message: '请求格式错误' }, 400);
+  }
+  c.req.raw = new Request(c.req.raw, { body: bodyText });
+
+  const ip = c.req.header('cf-connecting-ip') || 'unknown';
+  if (c.env.RATE_LIMITER) {
+    const ipId = c.env.RATE_LIMITER.idFromName(`login:ip:${ip}`);
+    const ipStub = c.env.RATE_LIMITER.get(ipId);
+    const ipResult = await ipStub.check(ip, 10, 60_000);
+    if (!ipResult.allowed) {
+      return c.json({ message: 'Too many requests' }, 429);
+    }
+    if (email) {
+      const acctId = c.env.RATE_LIMITER.idFromName(`login:acct:${email}`);
+      const acctStub = c.env.RATE_LIMITER.get(acctId);
+      if (await acctStub.isBlocked(email, 5, 15 * 60_000)) {
+        return c.json({ message: 'Too many attempts. Please try again later.' }, 429);
+      }
     }
   }
+
   await next();
+
+  if (c.env.RATE_LIMITER && email) {
+    const acctId = c.env.RATE_LIMITER.idFromName(`login:acct:${email}`);
+    const acctStub = c.env.RATE_LIMITER.get(acctId);
+    if (c.res && c.res.status >= 400) {
+      await acctStub.recordFailure(email, 15 * 60_000);
+    } else if (c.res && c.res.status === 200) {
+      await acctStub.clear(email);
+    }
+  }
 });
 
 app.post('/api/auth/sign-up/email', (c) => {
