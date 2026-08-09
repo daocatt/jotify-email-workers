@@ -11,8 +11,19 @@ const routes = new Hono<Env>();
 routes.get('/api/user/me', async (c) => {
   const session = await getSessionUser(c);
   if (!session) return c.json({ error: 'Unauthorized' }, 401);
-  const { mustChangePassword, ...safeUser } = session.dbUser;
-  return c.json({ session: session.session, user: safeUser, mustChangePassword: !!mustChangePassword });
+  const u = session.dbUser;
+  const safeUser = {
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    emailVerified: u.emailVerified,
+    image: u.image,
+    role: u.role,
+    status: u.status,
+    createdAt: u.createdAt,
+    updatedAt: u.updatedAt,
+  };
+  return c.json({ session: session.session, user: safeUser, mustChangePassword: !!u.mustChangePassword });
 });
 
 routes.post('/api/user/change-password', async (c) => {
