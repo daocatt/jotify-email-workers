@@ -4,7 +4,7 @@ import {
   XCircle, Mail, Globe, Server, Link, AlertCircle, RefreshCw, Send,
   Menu, X, Edit, ChevronLeft, ChevronRight, Search
 } from 'lucide-react';
-import { DbUser, PublicConfig, Domain, Destination, ForwardRule, Webhook, WebhookRule, AdminUser } from './types';
+import { DbUser, PublicConfig, Domain, Destination, ForwardRule, Webhook, WebhookRule, AdminUser, FailedWebhook } from './types';
 
 interface DashboardProps {
   user: DbUser;
@@ -15,7 +15,7 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ user, config, onLogout, forceChangePassword, onPasswordChanged }: DashboardProps) {
-  const [activeTab, setActiveTab] = useState<'domains' | 'destinations' | 'forwardRules' | 'webhooks' | 'webhookRules' | 'admin' | 'superadmin' | 'help'>('domains');
+  const [activeTab, setActiveTab] = useState<'domains' | 'destinations' | 'forwardRules' | 'webhooks' | 'webhookRules' | 'failures' | 'admin' | 'superadmin' | 'help'>('domains');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(forceChangePassword || false);
   const [oldPassword, setOldPassword] = useState('');
@@ -29,6 +29,8 @@ export default function Dashboard({ user, config, onLogout, forceChangePassword,
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [webhookRules, setWebhookRules] = useState<WebhookRule[]>([]);
   const [usersList, setUsersList] = useState<AdminUser[]>([]);
+  const [failures, setFailures] = useState<FailedWebhook[]>([]);
+  const [failuresTotal, setFailuresTotal] = useState(0);
 
   // Input states for Domain / Destination adding (simple inputs)
   const [newDomain, setNewDomain] = useState('');
@@ -44,6 +46,8 @@ export default function Dashboard({ user, config, onLogout, forceChangePassword,
   const [webhooksPage, setWebhooksPage] = useState(1);
   const [webhookRulesPage, setWebhookRulesPage] = useState(1);
   const [usersListPage, setUsersListPage] = useState(1);
+  const [failuresPage, setFailuresPage] = useState(1);
+  const [failuresSearch, setFailuresSearch] = useState('');
 
   // Search state for Forwarding Rules
   const [forwardRulesSearch, setForwardRulesSearch] = useState('');
@@ -89,6 +93,8 @@ export default function Dashboard({ user, config, onLogout, forceChangePassword,
     setWebhooksPage(1);
     setWebhookRulesPage(1);
     setUsersListPage(1);
+    setFailuresPage(1);
+    setFailuresSearch('');
     setForwardRulesSearch('');
     fetchDashboardData();
   }, [activeTab]);
@@ -125,6 +131,14 @@ export default function Dashboard({ user, config, onLogout, forceChangePassword,
       } else if (activeTab === 'admin' || activeTab === 'superadmin') {
         const res = await fetch('/api/admin/users');
         if (res.ok) setUsersList(((await res.json()) as any).users || []);
+      } else if (activeTab === 'failures') {
+        const query = `/api/failed-webhooks?page=${failuresPage}${failuresSearch ? `&search=${encodeURIComponent(failuresSearch)}` : ''}`;
+        const res = await fetch(query);
+        if (res.ok) {
+          const data = await res.json() as any;
+          setFailures(data.failures || []);
+          setFailuresTotal(data.total || 0);
+        }
       }
     } catch (err) {
       console.error('Error fetching tab data:', err);
@@ -400,6 +414,32 @@ export default function Dashboard({ user, config, onLogout, forceChangePassword,
     }
   };
 
+  const retryFailure = async (id: number) => {
+    if (!confirm('确定重新投递该失败记录吗？')) return;
+    try {
+      const res = await fetch(`/api/failed-webhooks/${id}/retry`, { method: 'POST' });
+      if (res.ok) {
+        alert('已重新加入投递队列');
+        fetchDashboardData();
+      } else {
+        const data = await res.json() as any;
+        alert(`重试失败: ${data.error || '未知错误'}`);
+      }
+    } catch {
+      alert('网络错误');
+    }
+  };
+
+  const deleteFailure = async (id: number) => {
+    if (!confirm('确定删除该失败记录吗？')) return;
+    try {
+      const res = await fetch(`/api/failed-webhooks/${id}`, { method: 'DELETE' });
+      if (res.ok) fetchDashboardData();
+    } catch {
+      alert('网络错误');
+    }
+  };
+
   const approveUser = async (id: string) => {
     try {
       const res = await fetch(`/api/admin/users/${id}/approve`, { method: 'POST' });
@@ -661,6 +701,15 @@ export default function Dashboard({ user, config, onLogout, forceChangePassword,
               <Link className="h-4 w-4" />
               API 集成规则
             </button>
+
+            <button
+              onClick={() => { setActiveTab('failures'); setMobileMenuOpen(false); }}
+              className={`w-full text-left px-3 py-2 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'failures' ? 'bg-black text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+                }`}
+            >
+              <XCircle className="h-4 w-4" />
+              投递失败记录
+            </button>
           </div>
 
           {/* Group 2.5: Help Docs */}
@@ -842,6 +891,86 @@ export default function Dashboard({ user, config, onLogout, forceChangePassword,
                     </tbody>
                   </table>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Failures tab */}
+          {activeTab === 'failures' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 font-serif">Webhook 投递失败记录</h3>
+                  <p className="text-xs text-gray-500 mt-1">经过全部重试仍未送达的 Webhook 投递。可手动重新投递或删除记录。</p>
+                </div>
+                <div className="relative w-full sm:w-64">
+                  <Search className="h-3.5 w-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="搜索 URL 或 Delivery ID..."
+                    value={failuresSearch}
+                    onChange={(e) => {
+                      setFailuresSearch(e.target.value);
+                      setFailuresPage(1);
+                      fetchDashboardData();
+                    }}
+                    className="w-full pl-8 pr-3 py-1.5 bg-white border border-gray-200 rounded text-xs focus:outline-none focus:border-black transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div className="border border-gray-100 rounded overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-100 text-xs">
+                  <thead className="bg-gray-50 font-semibold text-gray-700">
+                    <tr>
+                      <th className="px-4 py-3 text-left">Webhook</th>
+                      <th className="px-4 py-3 text-left">Delivery ID</th>
+                      <th className="px-4 py-3 text-left">重试次数</th>
+                      <th className="px-4 py-3 text-left">失败时间</th>
+                      <th className="px-4 py-3 text-right">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 text-gray-700">
+                    {failures.length > 0 ? (
+                      failures.map(f => (
+                        <tr key={f.id} className="hover:bg-gray-50/50">
+                          <td className="px-4 py-3">
+                            <div className="font-semibold text-gray-900">{f.webhookName || `Webhook #${f.webhookId}`}</div>
+                            <div className="font-mono text-[10px] text-gray-400 max-w-[240px] truncate">{f.url}</div>
+                          </td>
+                          <td className="px-4 py-3 font-mono text-[10px] max-w-[200px] truncate" title={f.deliveryId}>{f.deliveryId}</td>
+                          <td className="px-4 py-3">{f.attempts}</td>
+                          <td className="px-4 py-3">{new Date(f.createdAt).toLocaleString()}</td>
+                          <td className="px-4 py-3 text-right whitespace-nowrap">
+                            <button
+                              onClick={() => retryFailure(f.id)}
+                              className="text-emerald-600 hover:text-emerald-800 mr-3 cursor-pointer"
+                              title="重新投递"
+                            >
+                              <RefreshCw className="h-4 w-4 inline" />
+                            </button>
+                            <button
+                              onClick={() => deleteFailure(f.id)}
+                              className="text-red-500 hover:text-red-700 cursor-pointer"
+                              title="删除记录"
+                            >
+                              <Trash2 className="h-4 w-4 inline" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">暂无失败记录</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+                <PaginationControls
+                  currentPage={failuresPage}
+                  totalItems={failuresTotal}
+                  onPageChange={(p) => { setFailuresPage(p); fetchDashboardData(); }}
+                />
               </div>
             </div>
           )}
