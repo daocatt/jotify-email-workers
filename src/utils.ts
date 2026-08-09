@@ -155,6 +155,18 @@ export function validateEmail(email: string): boolean {
   return EMAIL_RE.test(email);
 }
 
+export function validateSubdomain(subdomain: string | null): string | null {
+  if (!subdomain) return null;
+  const s = subdomain.trim().toLowerCase();
+  if (s.length > 63) {
+    return 'Subdomain must be at most 63 characters';
+  }
+  if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(s)) {
+    return 'Subdomain may only contain letters, digits and hyphens, and cannot start or end with a hyphen';
+  }
+  return null;
+}
+
 export function validatePasswordStrength(password: string): string | null {
   if (!password || password.length < 8) {
     return 'Password must be at least 8 characters';

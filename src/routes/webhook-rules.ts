@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { eq, and, sql, isNull } from 'drizzle-orm';
 import * as schema from '../db/schema';
 import { getDb } from '../db';
-import { Env, getSessionUser, validateRegexPattern } from '../utils';
+import { Env, getSessionUser, validateRegexPattern, validateSubdomain } from '../utils';
 
 const routes = new Hono<Env>();
 
@@ -26,6 +26,8 @@ routes.post('/api/webhook-rules', async (c) => {
 
   const regexErr = validateRegexPattern(usernamePattern);
   if (regexErr) return c.json({ error: regexErr }, 400);
+  const subErr = validateSubdomain(subdomain);
+  if (subErr) return c.json({ error: subErr }, 400);
 
   const db = getDb(c.env.DB);
   const [ownDomain, ownWebhook] = await Promise.all([
@@ -93,6 +95,8 @@ routes.put('/api/webhook-rules/:id', async (c) => {
 
   const regexErr = validateRegexPattern(usernamePattern);
   if (regexErr) return c.json({ error: regexErr }, 400);
+  const subErr = validateSubdomain(subdomain);
+  if (subErr) return c.json({ error: subErr }, 400);
 
   const db = getDb(c.env.DB);
   const [ownDomain, ownWebhook] = await Promise.all([
