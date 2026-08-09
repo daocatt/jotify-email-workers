@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   ShieldAlert, LogOut, Plus, Trash2, Key, Users, CheckCircle,
   XCircle, Mail, Globe, Server, Link, AlertCircle, RefreshCw, Send,
-  Menu, X, Edit, ChevronLeft, ChevronRight
+  Menu, X, Edit, ChevronLeft, ChevronRight, Search
 } from 'lucide-react';
 import { DbUser, PublicConfig, Domain, Destination, ForwardRule, Webhook, WebhookRule, AdminUser } from './types';
 
@@ -45,6 +45,9 @@ export default function Dashboard({ user, config, onLogout, forceChangePassword,
   const [webhookRulesPage, setWebhookRulesPage] = useState(1);
   const [usersListPage, setUsersListPage] = useState(1);
 
+  // Search state for Forwarding Rules
+  const [forwardRulesSearch, setForwardRulesSearch] = useState('');
+
   // ── Modal & Form States for WEBHOOKS ──
   const [webhookModalOpen, setWebhookModalOpen] = useState(false);
   const [editingWebhook, setEditingWebhook] = useState<Webhook | null>(null);
@@ -86,6 +89,7 @@ export default function Dashboard({ user, config, onLogout, forceChangePassword,
     setWebhooksPage(1);
     setWebhookRulesPage(1);
     setUsersListPage(1);
+    setForwardRulesSearch('');
     fetchDashboardData();
   }, [activeTab]);
 
@@ -988,77 +992,159 @@ export default function Dashboard({ user, config, onLogout, forceChangePassword,
           )}
 
           {/* Forwarding Rules tab */}
-          {activeTab === 'forwardRules' && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="text-base font-bold text-gray-900 font-serif">邮箱转发规则 (Email Forwarding Rules)</h3>
-                  <p className="text-xs text-gray-500 mt-1">设置具体邮箱地址或正则规则，匹配成功的收信将转发至您绑定的目标邮箱。</p>
-                </div>
-                <button
-                  onClick={() => openForwardRuleModal(null)}
-                  className="px-3.5 py-1.5 bg-black hover:bg-gray-800 text-white text-xs font-semibold rounded flex items-center gap-1 cursor-pointer transition-colors "
-                >
-                  <Plus className="h-4 w-4" />
-                  新建转发规则
-                </button>
-              </div>
+          {activeTab === 'forwardRules' && (() => {
+            // Helper to get domain string for a rule
+            const getRuleDomainString = (r: ForwardRule) => {
+              const d = domains.find(x => x.id === r.domainId);
+              return r.subdomain ? `${r.subdomain}.${d?.domain || ''}` : (d?.domain || '');
+            };
 
-              <div className="border border-gray-100 rounded overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-100 text-xs">
-                  <thead className="bg-gray-50 font-semibold text-gray-700">
-                    <tr>
-                      <th className="px-4 py-3 text-left">用户名正则</th>
-                      <th className="px-4 py-3 text-left">域名</th>
-                      <th className="px-4 py-3 text-left">转发至目标</th>
-                      <th className="px-4 py-3 text-right">操作</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 text-gray-700">
-                    {forwardRules.length > 0 ? (
-                      getPaginatedItems(forwardRules, forwardRulesPage).map(r => {
-                        const d = domains.find(x => x.id === r.domainId);
-                        const dest = destinations.find(x => x.id === r.destinationId);
-                        const displayDomain = r.subdomain ? `${r.subdomain}.${d?.domain || ''}` : (d?.domain || '');
-                        return (
-                          <tr key={r.id} className="hover:bg-gray-50/50">
-                            <td className="px-4 py-3 font-mono font-semibold text-black">^{r.usernamePattern}$</td>
-                            <td className="px-4 py-3 font-mono text-gray-500">@{displayDomain}</td>
-                            <td className="px-4 py-3 font-mono font-medium">{dest?.email}</td>
-                            <td className="px-4 py-3 text-right space-x-2">
-                              <button
-                                onClick={() => openForwardRuleModal(r)}
-                                className="text-gray-500 hover:text-gray-600 cursor-pointer"
-                                title="编辑"
-                              >
-                                <Edit className="h-4 w-4 inline" />
-                              </button>
-                              <button
-                                onClick={() => deleteForwardRule(r.id)}
-                                className="text-red-500 hover:text-red-700 cursor-pointer"
-                                title="删除"
-                              >
-                                <Trash2 className="h-4 w-4 inline" />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    ) : (
+            // Filter rules by domain search input
+            const filteredRules = forwardRules.filter(r => {
+              if (!forwardRulesSearch.trim()) return true;
+              const fullDomain = getRuleDomainString(r).toLowerCase();
+              return fullDomain.includes(forwardRulesSearch.trim().toLowerCase());
+            });
+
+            // Group filtered rules by domain string (alphabetically sorted by domain)
+            const groupedMap = new Map<string, ForwardRule[]>();
+            filteredRules.forEach(r => {
+              const domainStr = getRuleDomainString(r);
+              if (!groupedMap.has(domainStr)) {
+                groupedMap.set(domainStr, []);
+              }
+              groupedMap.get(domainStr)!.push(r);
+            });
+
+            const sortedGroupKeys = Array.from(groupedMap.keys()).sort((a, b) => a.localeCompare(b));
+
+            // Flatten rules based on sorted domain groups
+            const sortedAndGroupedRules: ForwardRule[] = [];
+            sortedGroupKeys.forEach(domainStr => {
+              const rulesInGroup = groupedMap.get(domainStr) || [];
+              sortedAndGroupedRules.push(...rulesInGroup);
+            });
+
+            const paginatedRules = getPaginatedItems(sortedAndGroupedRules, forwardRulesPage);
+
+            return (
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div>
+                    <h3 className="text-base font-bold text-gray-900 font-serif">邮箱转发规则 (Email Forwarding Rules)</h3>
+                    <p className="text-xs text-gray-500 mt-1">设置具体邮箱地址或正则规则，匹配成功的收信将转发至您绑定的目标邮箱。</p>
+                  </div>
+                  <div className="flex items-center gap-3 w-full sm:w-auto">
+                    <div className="relative flex-1 sm:w-64">
+                      <Search className="h-3.5 w-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="按域名搜索规则..."
+                        value={forwardRulesSearch}
+                        onChange={(e) => {
+                          setForwardRulesSearch(e.target.value);
+                          setForwardRulesPage(1);
+                        }}
+                        className="w-full pl-8 pr-3 py-1.5 bg-white border border-gray-200 rounded text-xs focus:outline-none focus:border-black transition-colors"
+                      />
+                      {forwardRulesSearch && (
+                        <button
+                          onClick={() => {
+                            setForwardRulesSearch('');
+                            setForwardRulesPage(1);
+                          }}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => openForwardRuleModal(null)}
+                      className="px-3.5 py-1.5 bg-black hover:bg-gray-800 text-white text-xs font-semibold rounded flex items-center gap-1 cursor-pointer transition-colors whitespace-nowrap"
+                    >
+                      <Plus className="h-4 w-4" />
+                      新建转发规则
+                    </button>
+                  </div>
+                </div>
+
+                <div className="border border-gray-100 rounded overflow-hidden">
+                  <table className="min-w-full divide-y divide-gray-100 text-xs">
+                    <thead className="bg-gray-50 font-semibold text-gray-700">
                       <tr>
-                        <td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">暂无转发规则数据</td>
+                        <th className="px-4 py-3 text-left">用户名正则</th>
+                        <th className="px-4 py-3 text-left">域名</th>
+                        <th className="px-4 py-3 text-left">转发至目标</th>
+                        <th className="px-4 py-3 text-right">操作</th>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
-                <PaginationControls
-                  currentPage={forwardRulesPage}
-                  totalItems={forwardRules.length}
-                  onPageChange={setForwardRulesPage}
-                />
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 text-gray-700">
+                      {paginatedRules.length > 0 ? (
+                        paginatedRules.map((r, idx) => {
+                          const displayDomain = getRuleDomainString(r);
+                          const prevDisplayDomain = idx > 0 ? getRuleDomainString(paginatedRules[idx - 1]) : null;
+                          const isFirstInGroup = displayDomain !== prevDisplayDomain;
+                          const groupCount = sortedAndGroupedRules.filter(x => getRuleDomainString(x) === displayDomain).length;
+                          const dest = destinations.find(x => x.id === r.destinationId);
+
+                          return (
+                            <React.Fragment key={r.id}>
+                              {isFirstInGroup && (
+                                <tr className="bg-gray-100/70 border-t border-b border-gray-200/80">
+                                  <td colSpan={4} className="px-4 py-2 font-mono font-bold text-gray-800 bg-gray-100/80">
+                                    <div className="flex items-center gap-2">
+                                      <Globe className="h-3.5 w-3.5 text-gray-600 inline" />
+                                      <span>@{displayDomain}</span>
+                                      <span className="text-[10px] font-normal text-gray-500 bg-white px-2 py-0.5 rounded-full border border-gray-200">
+                                        {groupCount} 条规则
+                                      </span>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                              <tr className="hover:bg-gray-50/50">
+                                <td className="px-4 py-3 font-mono font-semibold text-black">^{r.usernamePattern}$</td>
+                                <td className="px-4 py-3 font-mono text-gray-500">@{displayDomain}</td>
+                                <td className="px-4 py-3 font-mono font-medium">{dest?.email}</td>
+                                <td className="px-4 py-3 text-right space-x-2">
+                                  <button
+                                    onClick={() => openForwardRuleModal(r)}
+                                    className="text-gray-500 hover:text-gray-600 cursor-pointer"
+                                    title="编辑"
+                                  >
+                                    <Edit className="h-4 w-4 inline" />
+                                  </button>
+                                  <button
+                                    onClick={() => deleteForwardRule(r.id)}
+                                    className="text-red-500 hover:text-red-700 cursor-pointer"
+                                    title="删除"
+                                  >
+                                    <Trash2 className="h-4 w-4 inline" />
+                                  </button>
+                                </td>
+                              </tr>
+                            </React.Fragment>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">
+                            {forwardRulesSearch ? `未匹配到与 "${forwardRulesSearch}" 相关的转发规则` : '暂无转发规则数据'}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                  <PaginationControls
+                    currentPage={forwardRulesPage}
+                    totalItems={sortedAndGroupedRules.length}
+                    onPageChange={setForwardRulesPage}
+                  />
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Webhooks tab */}
           {activeTab === 'webhooks' && (
