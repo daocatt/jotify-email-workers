@@ -126,9 +126,13 @@ export async function handleEmail(message: ForwardableEmailMessage, env: Binding
     }
     const matched = safeRegexTest(r.rule.usernamePattern, username);
     if (matched) {
-      console.log(`[Email Worker] Match forwarding rule! Forwarding to: ${maskEmail(r.destination)}`);
-      await message.forward(r.destination);
-      ruleMatched = true;
+      try {
+        console.log(`[Email Worker] Match forwarding rule! Forwarding to: ${maskEmail(r.destination)}`);
+        await message.forward(r.destination);
+        ruleMatched = true;
+      } catch (err) {
+        console.error(`[Email Worker] Forward failed for ${maskEmail(to)} to ${maskEmail(r.destination)}:`, err);
+      }
     }
   }
 
