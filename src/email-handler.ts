@@ -147,7 +147,62 @@ export async function handleEmail(message: ForwardableEmailMessage, env: Binding
     }
 
     let webhookMatched = false;
-    let rawEmail: ArrayBuffer | null = null;
+
+    let parsedContent: {
+      subject: string;
+      text: string;
+      attachmentUrls: Array<{ filename: string; mimeType: string; size: number; url: string }>;
+    } | null = null;
+
+    async function getParsedContent() {
+      if (parsedContent) return parsedContent;
+      const rawEmail = await streamToArrayBuffer(message.raw, message.rawSize);
+      const parser = new PostalMime();
+      const parsed = await parser.parse(rawEmail);
+      const subject = parsed.subject || '';
+      const text = parsed.text || stripHtml(parsed.html || '');
+
+      const attachmentUrls: Array<{ filename: string; mimeType: string; size: number; url: string }> = [];
+      if (env.ATTACHMENT_BUCKET && env.R2_PUBLIC_URL && parsed.attachments && parsed.attachments.length > 0) {
+        for (const att of parsed.attachments) {
+          const dateStr = new Date().toISOString().slice(0, 7).replace('-', '');
+          const uniqueId = crypto.randomUUID();
+          const safeFilename = att.filename ? att.filename.replace(/[^a-zA-Z0-9.\-_]/g, '_') : 'unnamed';
+          const r2Key = `${dateStr}/${uniqueId}/${safeFilename}`;
+
+          await env.ATTACHMENT_BUCKET.put(r2Key, att.content, {
+            httpMetadata: {
+              contentType: att.mimeType || 'application/octet-stream',
+              contentDisposition: `attachment; filename*=UTF-8''${encodeURIComponent(att.filename || 'attachment')}`
+            }
+          });
+
+          let attachmentUrl: string;
+          try {
+            const signedUrlObj = await (env.ATTACHMENT_BUCKET as any).createSignedUrl(r2Key, 3600);
+            if (signedUrlObj) {
+              attachmentUrl = signedUrlObj;
+            } else {
+              console.warn(`[Email Worker] Signed URL not available for ${r2Key}, skipping attachment URL`);
+              continue;
+            }
+          } catch {
+            console.warn(`[Email Worker] Failed to create signed URL for ${r2Key}, skipping attachment URL`);
+            continue;
+          }
+
+          attachmentUrls.push({
+            filename: att.filename || 'unnamed',
+            mimeType: att.mimeType || 'application/octet-stream',
+            size: typeof att.content === 'string' ? att.content.length : (att.content as ArrayBuffer).byteLength,
+            url: attachmentUrl
+          });
+        }
+      }
+
+      parsedContent = { subject, text, attachmentUrls };
+      return parsedContent;
+    }
 
     for (const w of allWebhookRules) {
       if (parsedDomain !== w.domain && !parsedDomain.endsWith('.' + w.domain)) continue;
@@ -166,52 +221,7 @@ export async function handleEmail(message: ForwardableEmailMessage, env: Binding
       try {
         console.log(`[Email Worker] Match webhook rule! Triggering HTTP POST to: ${w.webhook.url.replace(/\/\/[^@]+@/, '//***@')}`);
 
-        if (!rawEmail) {
-          rawEmail = await streamToArrayBuffer(message.raw, message.rawSize);
-        }
-
-        const parser = new PostalMime();
-        const parsed = await parser.parse(rawEmail);
-        const subject = parsed.subject || '';
-        const text = parsed.text || stripHtml(parsed.html || '');
-
-        const attachmentUrls: Array<{ filename: string; mimeType: string; size: number; url: string }> = [];
-        if (env.ATTACHMENT_BUCKET && env.R2_PUBLIC_URL && parsed.attachments && parsed.attachments.length > 0) {
-          for (const att of parsed.attachments) {
-            const dateStr = new Date().toISOString().slice(0, 7).replace('-', '');
-            const uniqueId = crypto.randomUUID();
-            const safeFilename = att.filename ? att.filename.replace(/[^a-zA-Z0-9.\-_]/g, '_') : 'unnamed';
-            const r2Key = `${dateStr}/${uniqueId}/${safeFilename}`;
-
-            await env.ATTACHMENT_BUCKET.put(r2Key, att.content, {
-              httpMetadata: {
-                contentType: att.mimeType || 'application/octet-stream',
-                contentDisposition: `attachment; filename*=UTF-8''${encodeURIComponent(att.filename || 'attachment')}`
-              }
-            });
-
-            let attachmentUrl: string;
-            try {
-              const signedUrlObj = await (env.ATTACHMENT_BUCKET as any).createSignedUrl(r2Key, 3600);
-              if (signedUrlObj) {
-                attachmentUrl = signedUrlObj;
-              } else {
-                console.warn(`[Email Worker] Signed URL not available for ${r2Key}, skipping attachment URL`);
-                continue;
-              }
-            } catch {
-              console.warn(`[Email Worker] Failed to create signed URL for ${r2Key}, skipping attachment URL`);
-              continue;
-            }
-
-            attachmentUrls.push({
-              filename: att.filename || 'unnamed',
-              mimeType: att.mimeType || 'application/octet-stream',
-              size: typeof att.content === 'string' ? att.content.length : (att.content as ArrayBuffer).byteLength,
-              url: attachmentUrl
-            });
-          }
-        }
+        const { subject, text, attachmentUrls } = await getParsedContent();
 
         const webhookIdempotencyKey = `jotify/webhook/${w.webhook.id}/${deliveryUuid}`;
         const payload = {
