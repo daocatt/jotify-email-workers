@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   ShieldAlert, LogOut, Plus, Trash2, Key, Users, CheckCircle,
   XCircle, Mail, Globe, Server, Link, AlertCircle, RefreshCw, Send,
-  Menu, X, Edit, ChevronLeft, ChevronRight, Search
+  Menu, X, Edit, ChevronLeft, ChevronRight, Search, FileText, BookOpen
 } from 'lucide-react';
 import { DbUser, PublicConfig, Domain, Destination, ForwardRule, Webhook, WebhookRule, AdminUser, FailedWebhook } from './types';
 
@@ -10,11 +10,12 @@ interface DashboardProps {
   user: DbUser;
   config: PublicConfig;
   onLogout: () => void;
+  onOpenDocs?: () => void;
   forceChangePassword?: boolean;
   onPasswordChanged?: () => void;
 }
 
-export default function Dashboard({ user, config, onLogout, forceChangePassword, onPasswordChanged }: DashboardProps) {
+export default function Dashboard({ user, config, onLogout, onOpenDocs, forceChangePassword, onPasswordChanged }: DashboardProps) {
   const [activeTab, setActiveTab] = useState<'domains' | 'destinations' | 'forwardRules' | 'webhooks' | 'webhookRules' | 'failures' | 'admin' | 'superadmin' | 'help'>('domains');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(forceChangePassword || false);
@@ -754,8 +755,17 @@ export default function Dashboard({ user, config, onLogout, forceChangePassword,
                 }`}
             >
               <AlertCircle className="h-4 w-4" />
-              使用帮助 & 文档
+              使用帮助
             </button>
+            {onOpenDocs && (
+              <button
+                onClick={() => { onOpenDocs(); setMobileMenuOpen(false); }}
+                className="w-full text-left px-3 py-2 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors text-blue-600 hover:bg-blue-50 border border-transparent hover:border-blue-100"
+              >
+                <BookOpen className="h-4 w-4 text-blue-600" />
+                Webhook 开发文档 ↗
+              </button>
+            )}
           </div>
 
           {/* Group 3: Admin Actions */}
@@ -910,6 +920,11 @@ export default function Dashboard({ user, config, onLogout, forceChangePassword,
                         <td className="px-4 py-2 text-gray-700 font-sans">邮件纯文本内容。若只包含 HTML，系统会自动过滤剥离 HTML 标签后返回纯文本主体。</td>
                       </tr>
                       <tr>
+                        <td className="px-4 py-2 text-gray-600 font-semibold">html</td>
+                        <td className="px-4 py-2 text-gray-500">string | null</td>
+                        <td className="px-4 py-2 text-gray-700 font-sans">邮件原始未经修改的 HTML 富文本内容（保留完整标签），若邮件无 HTML 则为 null。</td>
+                      </tr>
+                      <tr>
                         <td className="px-4 py-2 text-gray-600 font-semibold">rawSize</td>
                         <td className="px-4 py-2 text-gray-500">number</td>
                         <td className="px-4 py-2 text-gray-700 font-sans">原始邮件大小（单位：字节 Byte）</td>
@@ -924,6 +939,18 @@ export default function Dashboard({ user, config, onLogout, forceChangePassword,
                     </tbody>
                   </table>
                 </div>
+
+                {onOpenDocs && (
+                  <div className="pt-3">
+                    <button
+                      onClick={onOpenDocs}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-black hover:bg-gray-800 text-white rounded text-xs font-semibold cursor-pointer transition-colors"
+                    >
+                      <BookOpen className="h-4 w-4" />
+                      查看完整的 Webhook 接收端开发文档与代码示例 →
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1316,13 +1343,24 @@ export default function Dashboard({ user, config, onLogout, forceChangePassword,
                   <h3 className="text-base font-bold text-gray-900 font-serif">API Webhook 接口</h3>
                   <p className="text-xs text-gray-500 mt-1">配置您可以将邮件转发去的一个或多个外部 Webhook 接口。</p>
                 </div>
-                <button
-                  onClick={() => openWebhookModal(null)}
-                  className="px-3.5 py-1.5 bg-black hover:bg-gray-800 text-white text-xs font-semibold rounded flex items-center gap-1 cursor-pointer transition-colors "
-                >
-                  <Plus className="h-4 w-4" />
-                  新建 Webhook
-                </button>
+                <div className="flex items-center gap-2">
+                  {onOpenDocs && (
+                    <button
+                      onClick={onOpenDocs}
+                      className="px-3.5 py-1.5 border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded flex items-center gap-1.5 cursor-pointer transition-colors"
+                    >
+                      <BookOpen className="h-4 w-4 text-gray-500" />
+                      开发接入文档
+                    </button>
+                  )}
+                  <button
+                    onClick={() => openWebhookModal(null)}
+                    className="px-3.5 py-1.5 bg-black hover:bg-gray-800 text-white text-xs font-semibold rounded flex items-center gap-1 cursor-pointer transition-colors "
+                  >
+                    <Plus className="h-4 w-4" />
+                    新建 Webhook
+                  </button>
+                </div>
               </div>
 
               <div className="border border-gray-100 rounded overflow-hidden">

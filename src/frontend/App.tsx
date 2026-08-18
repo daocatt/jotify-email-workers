@@ -3,21 +3,59 @@ import Login from './Login';
 import Register from './Register';
 import ForgotPassword from './ForgotPassword';
 import Dashboard from './Dashboard';
+import Docs from './Docs';
 import { PublicConfig, DbUser } from './types';
+
+export type AppView = 'login' | 'register' | 'forgot' | 'dashboard' | 'forceChangePassword' | 'docs';
 
 export default function App() {
   const [user, setUser] = useState<DbUser | null>(null);
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [mustChangePassword, setMustChangePassword] = useState(false);
-  const [view, setView] = useState<'login' | 'register' | 'forgot' | 'dashboard' | 'forceChangePassword'>('login');
+  const [view, setView] = useState<AppView>(() => {
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/docs')) {
+      return 'docs';
+    }
+    return 'login';
+  });
   const [config, setConfig] = useState<PublicConfig>({ allowRegister: true, requireApproval: true, maxDomainsPerUser: 1, turnstileSiteKey: null });
+
+  // Handle URL path changes & history popstate
+  useEffect(() => {
+    const handlePopState = () => {
+      if (window.location.pathname.startsWith('/docs')) {
+        setView('docs');
+      } else {
+        if (user) {
+          setView(mustChangePassword ? 'forceChangePassword' : 'dashboard');
+        } else {
+          setView('login');
+        }
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [user, mustChangePassword]);
 
   // Check login session on load
   useEffect(() => {
     fetchSession();
     fetchConfig();
   }, []);
+
+  const changeView = (newView: AppView) => {
+    setView(newView);
+    if (newView === 'docs') {
+      if (window.location.pathname !== '/docs') {
+        window.history.pushState({}, '', '/docs');
+      }
+    } else {
+      if (window.location.pathname === '/docs') {
+        window.history.pushState({}, '', '/');
+      }
+    }
+  };
 
   const fetchConfig = async () => {
     try {
@@ -39,14 +77,21 @@ export default function App() {
         setUser(data.user);
         setSession(data.session);
         setMustChangePassword(!!data.mustChangePassword);
-        setView(data.mustChangePassword ? 'forceChangePassword' : 'dashboard');
+        // Only override view if not already directly visiting /docs
+        if (!window.location.pathname.startsWith('/docs')) {
+          setView(data.mustChangePassword ? 'forceChangePassword' : 'dashboard');
+        }
       } else {
         setUser(null);
         setSession(null);
-        setView('login');
+        if (!window.location.pathname.startsWith('/docs')) {
+          setView('login');
+        }
       }
     } catch {
-      setView('login');
+      if (!window.location.pathname.startsWith('/docs')) {
+        setView('login');
+      }
     } finally {
       setLoading(false);
     }
@@ -64,7 +109,7 @@ export default function App() {
     } finally {
       setUser(null);
       setSession(null);
-      setView('login');
+      changeView('login');
     }
   };
 
@@ -82,25 +127,41 @@ export default function App() {
     );
   }
 
+  if (view === 'docs') {
+    return (
+      <Docs
+        user={user}
+        onBack={() => {
+          if (user) {
+            changeView(mustChangePassword ? 'forceChangePassword' : 'dashboard');
+          } else {
+            changeView('login');
+          }
+        }}
+      />
+    );
+  }
+
   if (view === 'login') {
-    return <Login config={config} setView={setView} onLoginSuccess={fetchSession} />;
+    return <Login config={config} setView={changeView} onLoginSuccess={fetchSession} />;
   }
 
   if (view === 'register') {
-    return <Register config={config} setView={setView} />;
+    return <Register config={config} setView={changeView} />;
   }
 
   if (view === 'forgot') {
-    return <ForgotPassword config={config} setView={setView} />;
+    return <ForgotPassword config={config} setView={changeView} />;
   }
 
   if (view === 'forceChangePassword' && user) {
-    return <Dashboard user={user} config={config} onLogout={handleLogout} forceChangePassword={mustChangePassword} onPasswordChanged={() => { setMustChangePassword(false); setView('dashboard'); }} />;
+    return <Dashboard user={user} config={config} onLogout={handleLogout} onOpenDocs={() => changeView('docs')} forceChangePassword={mustChangePassword} onPasswordChanged={() => { setMustChangePassword(false); changeView('dashboard'); }} />;
   }
 
   if (view === 'dashboard') {
-    return <Dashboard user={user!} config={config} onLogout={handleLogout} />;
+    return <Dashboard user={user!} config={config} onLogout={handleLogout} onOpenDocs={() => changeView('docs')} />;
   }
 
   return null;
 }
+

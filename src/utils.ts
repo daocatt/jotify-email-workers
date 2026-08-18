@@ -22,6 +22,7 @@ export interface Bindings {
   WEBHOOK_SIGNING_SECRET?: string;
   RETRY_QUEUE: Queue<import('./retry').RetryMessage>;
   RATE_LIMITER: DurableObjectNamespace<import('./rate-limiter-do').RateLimiterDO>;
+  ASSETS?: Fetcher;
 }
 
 export type Env = { Bindings: Bindings };
