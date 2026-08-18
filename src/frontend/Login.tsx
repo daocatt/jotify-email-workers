@@ -4,7 +4,7 @@ import { PublicConfig } from './types';
 
 interface LoginProps {
   config: PublicConfig;
-  setView: (view: 'login' | 'register' | 'forgot' | 'dashboard') => void;
+  setView: (view: 'login' | 'register' | 'forgot' | 'dashboard' | 'docs') => void;
   onLoginSuccess: () => void;
 }
 
@@ -113,6 +113,15 @@ export default function Login({ config, setView, onLoginSuccess }: LoginProps) {
               <span className="text-gray-400">自主注册已关闭</span>
             )}
             <button onClick={() => setView('forgot')} disabled={isSubmitting} className="text-gray-600 hover:text-black cursor-pointer disabled:opacity-50 transition-colors">忘记密码？</button>
+          </div>
+
+          <div className="mt-6 pt-5 border-t border-gray-100 flex items-center justify-center text-xs text-gray-500">
+            <button
+              onClick={() => setView('docs')}
+              className="inline-flex items-center gap-1.5 hover:text-black transition-colors cursor-pointer text-gray-600 font-medium"
+            >
+              <span>📖 查看 Webhook 接收端开发文档 →</span>
+            </button>
           </div>
         </div>
       </div>

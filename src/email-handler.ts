@@ -151,6 +151,7 @@ export async function handleEmail(message: ForwardableEmailMessage, env: Binding
     let parsedContent: {
       subject: string;
       text: string;
+      html: string | null;
       attachmentUrls: Array<{ filename: string; mimeType: string; size: number; url: string }>;
     } | null = null;
 
@@ -160,6 +161,7 @@ export async function handleEmail(message: ForwardableEmailMessage, env: Binding
       const parser = new PostalMime();
       const parsed = await parser.parse(rawEmail);
       const subject = parsed.subject || '';
+      const html = parsed.html || null;
       const text = parsed.text || stripHtml(parsed.html || '');
 
       const attachmentUrls: Array<{ filename: string; mimeType: string; size: number; url: string }> = [];
@@ -200,7 +202,7 @@ export async function handleEmail(message: ForwardableEmailMessage, env: Binding
         }
       }
 
-      parsedContent = { subject, text, attachmentUrls };
+      parsedContent = { subject, text, html, attachmentUrls };
       return parsedContent;
     }
 
@@ -221,7 +223,7 @@ export async function handleEmail(message: ForwardableEmailMessage, env: Binding
       try {
         console.log(`[Email Worker] Match webhook rule! Triggering HTTP POST to: ${w.webhook.url.replace(/\/\/[^@]+@/, '//***@')}`);
 
-        const { subject, text, attachmentUrls } = await getParsedContent();
+        const { subject, text, html, attachmentUrls } = await getParsedContent();
 
         const webhookIdempotencyKey = `jotify/webhook/${w.webhook.id}/${deliveryUuid}`;
         const payload = {
@@ -229,6 +231,7 @@ export async function handleEmail(message: ForwardableEmailMessage, env: Binding
           from: from,
           subject,
           text,
+          html,
           rawSize: message.rawSize,
           attachments: attachmentUrls,
           delivery_id: webhookIdempotencyKey,

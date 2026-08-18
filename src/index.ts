@@ -180,6 +180,17 @@ app.route('/', webhookRuleRoutes);
 app.route('/', failedWebhookRoutes);
 app.route('/', adminRoutes);
 
+app.get('*', async (c) => {
+  if (c.env.ASSETS) {
+    const res = await c.env.ASSETS.fetch(c.req.raw);
+    if (res.status === 404 && !c.req.path.startsWith('/api/')) {
+      return c.env.ASSETS.fetch(new Request(new URL('/', c.req.url), c.req.raw));
+    }
+    return res;
+  }
+  return c.text('Not Found', 404);
+});
+
 export { RateLimiterDO } from './rate-limiter-do';
 
 async function runCleanup(db: D1Database): Promise<void> {

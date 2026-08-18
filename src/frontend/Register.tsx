@@ -4,7 +4,7 @@ import { PublicConfig } from './types';
 
 interface RegisterProps {
   config: PublicConfig;
-  setView: (view: 'login' | 'register' | 'forgot' | 'dashboard') => void;
+  setView: (view: 'login' | 'register' | 'forgot' | 'dashboard' | 'docs') => void;
 }
 
 export default function Register({ config, setView }: RegisterProps) {
