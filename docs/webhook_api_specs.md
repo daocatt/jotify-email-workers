@@ -18,7 +18,7 @@
 ## 2. 请求规范与 Headers
 
 * **HTTP Method**: `POST`
-* **Content-Type**: `application/json; charset=utf-8`
+* **Content-Type**: `application/json`
 * **请求超时时间**: `15 秒`（接收端须在此时间内响应）
 
 ### HTTP Headers 说明
@@ -26,7 +26,7 @@
 | Header 字段 | 必选/可选 | 示例值 | 说明 |
 | :--- | :--- | :--- | :--- |
 | `Content-Type` | 必选 | `application/json` | 数据以 JSON 格式传输 |
-| `X-Jotify-Delivery-Id` | 必选 | `jotify/webhook/12/f47ac10b-58cc-4372-a567-0e02b2c3d479` | 全局唯一投递 ID，接收端用于**幂等去重** |
+| `X-Jotify-Delivery-Id` | 必选 | `jotify/webhook/12/f47ac10b-58cc-4372-a567-0e02b2c3d479` | 全局唯一投递 ID，接收端用于**幂等去重**（同时在 Body 的 `delivery_id` 也会提供） |
 | `X-Jotify-Signature` | 推荐 | `a3f890b34e2c...` (64位 Hex) | 使用 `WEBHOOK_SIGNING_SECRET` 对 Raw Body 进行 HMAC-SHA256 计算得出的签名 |
 | `Authorization` | 按需 | `Bearer your_token` | 当 Webhook 鉴权方式配置为 `Bearer Token` 时携带 |
 | 自定义 Header | 按需 | `X-Api-Key: secret` | 当 Webhook 鉴权配置为 `Custom Header` 时携带 |
@@ -89,7 +89,7 @@ $$\text{Signature} = \text{HMAC-SHA256}(\text{Secret}, \text{Raw JSON Body})$$
 1. **响应状态码**：必须返回 HTTP `2xx`（例如 `200 OK`、`202 Accepted`、`204 No Content`）。
 2. **响应时间限制**：须在 **15 秒** 内完成响应，否则视为超时并触发重试。
 3. **异步处理建议**：如需调用大模型分析、大文件处理或长业务链，建议在收到 Webhook 后**立刻返回 200 OK**，并将数据转入自身消息队列异步处理。
-4. **幂等去重**：利用 `delivery_id` 在 Redis 或数据库中做去重（如 `SETNX webhook:dedup:{delivery_id} 1 EX 86400`），避免网络重试引发重复处理。
+4. **幂等去重**：利用 `delivery_id`（或 `X-Jotify-Delivery-Id`）在 Redis 或数据库中做去重（如 `SETNX webhook:dedup:{delivery_id} 1 EX 86400`），避免网络重试引发重复处理。
 
 ---
 
@@ -101,7 +101,8 @@ Jotify 提供多层递进式重试机制：
 * **队列短期退避**：第 1 ~ 9 次队列重试，每 5 分钟重试一次。
 * **队列中期退避**：第 10 ~ 14 次队列重试，每 60 分钟重试一次。
 * **队列长期退避**：第 15 ~ 17 次队列重试，每 3 小时重试一次。
-* **死信队列持久化 (DLQ)**：全部约 20 次尝试（跨度超 24 小时）耗尽后，归档至数据库的「投递失败记录」表，支持管理员在后台手动点击重新投递。
+* **总时长跨度**：全流程重试跨度约 **15 小时**（9×5m + 5×60m + 3×180m ≈ 14.75 小时）。
+* **死信队列持久化 (DLQ)**：全部约 20 次尝试耗尽后，归档至数据库的「投递失败记录」表，支持管理员在后台手动点击重新投递。
 
 ---
 
@@ -136,8 +137,9 @@ app.post('/webhook/jotify-email', (req: any, res) => {
     return res.status(401).json({ error: 'Invalid signature' });
   }
 
-  const { to, from, subject, text, attachments } = req.body;
+  const { to, from, subject, text, html, attachments } = req.body;
   console.log(`[Webhook] 收到邮件 ${from} -> ${to}, 主题: ${subject}`);
+  console.log('纯文本:', text?.length, 'HTML:', html?.length);
 
   return res.status(200).json({ ok: true, delivery_id: deliveryId });
 });
@@ -152,10 +154,29 @@ import hmac
 import hashlib
 import os
 from fastapi import FastAPI, Request, HTTPException, Header
-from typing import Optional
+from pydantic import BaseModel, Field, ConfigDict
+from typing import List, Optional
 
 app = FastAPI()
 SIGNING_SECRET = os.getenv("WEBHOOK_SIGNING_SECRET", "")
+
+class Attachment(BaseModel):
+    filename: str
+    mimeType: str
+    size: int
+    url: str
+
+class EmailWebhookPayload(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    to: str
+    from_email: str = Field(default="", alias="from")
+    subject: str
+    text: str
+    html: Optional[str] = None
+    rawSize: int
+    attachments: List[Attachment] = []
+    delivery_id: str
 
 @app.post("/webhook/jotify-email")
 async def handle_webhook(

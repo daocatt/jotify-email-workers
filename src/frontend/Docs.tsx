@@ -105,7 +105,7 @@ import hmac
 import hashlib
 import os
 from fastapi import FastAPI, Request, HTTPException, Header
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 
 app = FastAPI(title="Jotify Email Webhook Receiver")
@@ -118,17 +118,16 @@ class Attachment(BaseModel):
     url: str
 
 class EmailWebhookPayload(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     to: str
-    from_: str = ""
+    from_email: str = Field(default="", alias="from")
     subject: str
     text: str
     html: Optional[str] = None
     rawSize: int
     attachments: List[Attachment] = []
     delivery_id: str
-
-    class Config:
-        fields = {'from_': 'from'}
 
 @app.post("/webhook/jotify-email")
 async def receive_email_webhook(
@@ -778,7 +777,7 @@ echo json_encode(['status' => 'success', 'delivery_id' => $deliveryId]);
                     <td className="px-4 py-2.5 font-bold text-gray-800 font-sans">阶段 4: 队列长期退避</td>
                     <td className="px-4 py-2.5 text-gray-700 font-sans">每 3 小时 (10800 秒)</td>
                     <td className="px-4 py-2.5 text-gray-800">第 15 ~ 17 次队列重试</td>
-                    <td className="px-4 py-2.5 font-sans text-gray-600">全流程总重试尝试跨度超过 24 小时。</td>
+                    <td className="px-4 py-2.5 font-sans text-gray-600">全流程总重试跨度约 15 小时（9×5m + 5×60m + 3×180m ≈ 14.75 小时）。</td>
                   </tr>
                   <tr>
                     <td className="px-4 py-2.5 font-bold text-red-700 font-sans">阶段 5: 死信队列与持久化</td>
