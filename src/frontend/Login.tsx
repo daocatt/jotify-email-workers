@@ -120,7 +120,7 @@ export default function Login({ config, setView, onLoginSuccess }: LoginProps) {
               onClick={() => setView('docs')}
               className="inline-flex items-center gap-1.5 hover:text-black transition-colors cursor-pointer text-gray-600 font-medium"
             >
-              <span>📖 查看 Webhook 接收端开发文档 →</span>
+              <span>查看 Webhook 接收端开发文档 →</span>
             </button>
           </div>
         </div>

@@ -218,11 +218,13 @@ export async function buildWebhookHeaders(
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
+  const deliveryId = (payload as any)?.delivery_id;
+  if (deliveryId) {
+    headers['X-Jotify-Delivery-Id'] = deliveryId;
+  }
   if (env.WEBHOOK_SIGNING_SECRET) {
     const sig = await signWebhookPayload(payload, env.WEBHOOK_SIGNING_SECRET);
     headers['X-Jotify-Signature'] = sig;
-    const deliveryId = (payload as any)?.delivery_id;
-    if (deliveryId) headers['X-Jotify-Delivery-Id'] = deliveryId;
   }
   if (webhook.authType === 'bearer' && webhook.authToken) {
     headers['Authorization'] = `Bearer ${webhook.authToken}`;

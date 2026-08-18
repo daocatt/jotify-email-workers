@@ -322,13 +322,18 @@ async function persistFailedWebhook(env: Bindings, msg: Message<RetryMessage>): 
   }
 
   try {
+    const sanitizedPayload = { ...payloadBody };
+    if (typeof sanitizedPayload.html === 'string' && sanitizedPayload.html.length > 100_000) {
+      sanitizedPayload.html = sanitizedPayload.html.slice(0, 100_000) + '... [truncated for database storage]';
+    }
+
     await db.insert(schema.failedWebhooks).values({
       userId: webhook.userId,
       webhookId,
       deliveryId,
       url: webhook.url,
       headers: JSON.stringify(sanitizeWebhookHeaders(msg.body.payload?.headers || {})),
-      payload: JSON.stringify(payloadBody),
+      payload: JSON.stringify(sanitizedPayload),
       attempts: msg.attempts,
       createdAt: new Date(),
       updatedAt: new Date(),
