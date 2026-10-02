@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ShieldAlert, LogOut, Plus, Trash2, Key, Users, CheckCircle,
   XCircle, Mail, Globe, Server, Link, AlertCircle, RefreshCw, Send,
-  Menu, X, Edit, ChevronLeft, ChevronRight, Search, FileText, BookOpen
+  Menu, X, Edit, ChevronLeft, ChevronRight, Search, FileText, BookOpen,
+  Filter, Check, ChevronDown
 } from 'lucide-react';
 import { DbUser, PublicConfig, Domain, Destination, ForwardRule, Webhook, WebhookRule, AdminUser, FailedWebhook } from './types';
 
@@ -56,6 +57,24 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
   const [forwardRulesSearch, setForwardRulesSearch] = useState('');
   const [selectedRuleDomainId, setSelectedRuleDomainId] = useState<number | 'all' | null>(null);
   const [domainFilterSearch, setDomainFilterSearch] = useState('');
+  const [domainHeaderFilter, setDomainHeaderFilter] = useState('');
+  const [domainFilterDropdownOpen, setDomainFilterDropdownOpen] = useState(false);
+  const domainFilterDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close domain filter dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (domainFilterDropdownRef.current && !domainFilterDropdownRef.current.contains(event.target as Node)) {
+        setDomainFilterDropdownOpen(false);
+      }
+    };
+    if (domainFilterDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [domainFilterDropdownOpen]);
 
   const effectiveSelectedDomainId: number | 'all' =
     (selectedRuleDomainId === 'all')
@@ -111,6 +130,8 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
     setForwardRulesSearch('');
     setSelectedRuleDomainId(null);
     setDomainFilterSearch('');
+    setDomainHeaderFilter('');
+    setDomainFilterDropdownOpen(false);
     fetchDashboardData();
   }, [activeTab]);
 
@@ -1079,7 +1100,7 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                   value={newDomain}
                   onChange={e => setNewDomain(e.target.value)}
                   className="flex-1 text-xs px-3.5 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
-                  placeholder="e.g. zwq.me"
+                  placeholder="e.g. example.com"
                 />
                 <button
                   type="submit"
@@ -1218,8 +1239,19 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
               ? forwardRules
               : forwardRules.filter(r => r.domainId === effectiveSelectedDomainId);
 
+            // Extract all distinct configured domains/subdomains in the current scope
+            const availableDomainStrings = Array.from(
+              new Set(domainScopedRules.map(r => getRuleDomainString(r)))
+            ).filter(Boolean).sort((a, b) => a.localeCompare(b));
+
+            // Filter rules according to column header filter on "匹配收信域名"
+            const domainFilterMatchedRules = domainScopedRules.filter(r => {
+              if (!domainHeaderFilter) return true;
+              return getRuleDomainString(r).toLowerCase() === domainHeaderFilter.toLowerCase();
+            });
+
             // Filter by search query (username regex, subdomain, or destination email)
-            const filteredRules = domainScopedRules.filter(r => {
+            const filteredRules = domainFilterMatchedRules.filter(r => {
               if (!forwardRulesSearch.trim()) return true;
               const search = forwardRulesSearch.trim().toLowerCase();
               const dest = destinations.find(x => x.id === r.destinationId);
@@ -1310,6 +1342,8 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                         onClick={() => {
                           setSelectedRuleDomainId('all');
                           setForwardRulesPage(1);
+                          setDomainHeaderFilter('');
+                          setDomainFilterDropdownOpen(false);
                         }}
                         className={`w-full text-left px-3 py-2 rounded text-xs font-medium flex items-center justify-between cursor-pointer transition-colors ${
                           effectiveSelectedDomainId === 'all'
@@ -1345,6 +1379,8 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                               onClick={() => {
                                 setSelectedRuleDomainId(d.id);
                                 setForwardRulesPage(1);
+                                setDomainHeaderFilter('');
+                                setDomainFilterDropdownOpen(false);
                               }}
                               className={`w-full text-left px-3 py-2 rounded text-xs font-medium flex items-center justify-between cursor-pointer transition-colors ${
                                 isSelected
@@ -1392,13 +1428,29 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                   <div className="flex-1 min-w-0 w-full space-y-3">
                     {/* Controls & Filter bar */}
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white p-3 border border-gray-200/80 rounded-lg shadow-xs">
-                      <div className="flex items-center gap-2 min-w-0">
+                      <div className="flex items-center gap-2 min-w-0 flex-wrap">
                         <span className="text-xs font-bold text-gray-900 truncate">
                           {currentSelectedDomain ? `@${currentSelectedDomain.domain}` : '全部域名'}
                         </span>
                         <span className="text-[11px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full font-medium shrink-0">
-                          共 {domainScopedRules.length} 条规则
+                          共 {domainFilterMatchedRules.length} 条规则
                         </span>
+                        {domainHeaderFilter && (
+                          <div className="flex items-center gap-1 bg-black text-white text-[11px] px-2 py-0.5 rounded-full font-mono font-medium shrink-0">
+                            <span>过滤: @{domainHeaderFilter}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDomainHeaderFilter('');
+                                setForwardRulesPage(1);
+                              }}
+                              className="text-gray-300 hover:text-white cursor-pointer ml-0.5"
+                              title="清除过滤"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        )}
                       </div>
 
                       <div className="relative w-full sm:w-64">
@@ -1433,7 +1485,114 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                         <thead className="bg-gray-50 font-semibold text-gray-700">
                           <tr>
                             <th className="px-4 py-3 text-left">用户名正则</th>
-                            <th className="px-4 py-3 text-left">匹配收信域名</th>
+                            <th className="px-4 py-3 text-left">
+                              <div className="flex items-center gap-1.5">
+                                <span>匹配收信域名</span>
+                                <div className="relative inline-block text-left" ref={domainFilterDropdownRef}>
+                                  <button
+                                    type="button"
+                                    onClick={() => setDomainFilterDropdownOpen(prev => !prev)}
+                                    className={`p-1 rounded cursor-pointer transition-colors flex items-center gap-0.5 ${
+                                      domainHeaderFilter
+                                        ? 'bg-black text-white hover:bg-gray-800'
+                                        : 'text-gray-400 hover:text-gray-700 hover:bg-gray-200/80'
+                                    }`}
+                                    title="按收信域名过滤"
+                                  >
+                                    <Filter className="h-3 w-3" />
+                                    <ChevronDown className="h-2.5 w-2.5" />
+                                  </button>
+
+                                  {domainFilterDropdownOpen && (
+                                    <div className="absolute left-0 mt-2 w-56 bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1 text-xs">
+                                      <div className="px-3 py-1.5 border-b border-gray-100 flex items-center justify-between text-gray-500 font-medium">
+                                        <span>筛选收信域名</span>
+                                        {domainHeaderFilter && (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setDomainHeaderFilter('');
+                                              setForwardRulesPage(1);
+                                              setDomainFilterDropdownOpen(false);
+                                            }}
+                                            className="text-gray-400 hover:text-black cursor-pointer text-[11px]"
+                                          >
+                                            重置全部
+                                          </button>
+                                        )}
+                                      </div>
+                                      <div className="max-h-56 overflow-y-auto py-1">
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setDomainHeaderFilter('');
+                                            setForwardRulesPage(1);
+                                            setDomainFilterDropdownOpen(false);
+                                          }}
+                                          className={`w-full text-left px-3 py-1.5 flex items-center justify-between cursor-pointer hover:bg-gray-50 ${
+                                            !domainHeaderFilter ? 'font-bold text-black bg-gray-50' : 'text-gray-700'
+                                          }`}
+                                        >
+                                          <div className="flex items-center gap-2">
+                                            {!domainHeaderFilter ? <Check className="h-3 w-3 text-black" /> : <span className="w-3" />}
+                                            <span>全部域名</span>
+                                          </div>
+                                          <span className="text-[10px] text-gray-400 font-mono">({domainScopedRules.length})</span>
+                                        </button>
+
+                                        {availableDomainStrings.length > 0 ? (
+                                          availableDomainStrings.map(domStr => {
+                                            const count = domainScopedRules.filter(r => getRuleDomainString(r) === domStr).length;
+                                            const isSelected = domainHeaderFilter.toLowerCase() === domStr.toLowerCase();
+                                            return (
+                                              <button
+                                                key={domStr}
+                                                type="button"
+                                                onClick={() => {
+                                                  setDomainHeaderFilter(domStr);
+                                                  setForwardRulesPage(1);
+                                                  setDomainFilterDropdownOpen(false);
+                                                }}
+                                                className={`w-full text-left px-3 py-1.5 flex items-center justify-between cursor-pointer hover:bg-gray-50 ${
+                                                  isSelected ? 'font-bold text-black bg-gray-50' : 'text-gray-700'
+                                                }`}
+                                              >
+                                                <div className="flex items-center gap-2 truncate">
+                                                  {isSelected ? <Check className="h-3 w-3 text-black shrink-0" /> : <span className="w-3 shrink-0" />}
+                                                  <span className="truncate font-mono">@{domStr}</span>
+                                                </div>
+                                                <span className="text-[10px] text-gray-400 font-mono shrink-0 ml-1">({count})</span>
+                                              </button>
+                                            );
+                                          })
+                                        ) : (
+                                          <div className="px-3 py-2 text-center text-gray-400 italic text-[11px]">
+                                            暂无可筛选域名
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {domainHeaderFilter && (
+                                  <span className="inline-flex items-center gap-1 bg-black text-white text-[10px] font-mono px-1.5 py-0.5 rounded-full font-normal">
+                                    <span>@{domainHeaderFilter}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setDomainHeaderFilter('');
+                                        setForwardRulesPage(1);
+                                      }}
+                                      className="hover:text-gray-300 cursor-pointer ml-0.5"
+                                      title="清除此过滤"
+                                    >
+                                      ✕
+                                    </button>
+                                  </span>
+                                )}
+                              </div>
+                            </th>
                             <th className="px-4 py-3 text-left">转发至目标</th>
                             <th className="px-4 py-3 text-right">操作</th>
                           </tr>
@@ -1489,8 +1648,23 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                           ) : (
                             <tr>
                               <td colSpan={4} className="px-4 py-12 text-center text-gray-400">
-                                {forwardRulesSearch ? (
-                                  <p className="italic">未匹配到与 "{forwardRulesSearch}" 相关的转发规则</p>
+                                {forwardRulesSearch || domainHeaderFilter ? (
+                                  <div className="space-y-2">
+                                    <p className="italic">
+                                      未匹配到与 {domainHeaderFilter ? `域名 "@${domainHeaderFilter}"` : ''} {forwardRulesSearch ? `关键词 "${forwardRulesSearch}"` : ''} 相关的转发规则
+                                    </p>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setForwardRulesSearch('');
+                                        setDomainHeaderFilter('');
+                                        setForwardRulesPage(1);
+                                      }}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-gray-700 bg-gray-100 hover:bg-gray-200 rounded cursor-pointer transition-colors"
+                                    >
+                                      清除筛选条件
+                                    </button>
+                                  </div>
                                 ) : (
                                   <div className="space-y-3">
                                     <p className="italic">
