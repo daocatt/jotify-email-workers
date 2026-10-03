@@ -99,7 +99,9 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
   const [ruleSubdomain, setRuleSubdomain] = useState('');
   const [ruleDomainId, setRuleDomainId] = useState('');
   const [ruleDestId, setRuleDestId] = useState('');
+  const [ruleEnabled, setRuleEnabled] = useState(true);
   const [forwardRuleSaving, setForwardRuleSaving] = useState(false);
+  const [togglingForwardRuleId, setTogglingForwardRuleId] = useState<number | null>(null);
 
   // ── Modal & Form States for WEBHOOK RULES ──
   const [webhookRuleModalOpen, setWebhookRuleModalOpen] = useState(false);
@@ -108,7 +110,9 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
   const [webhookRuleSubdomain, setWebhookRuleSubdomain] = useState('');
   const [webhookRuleDomainId, setWebhookRuleDomainId] = useState('');
   const [webhookRuleWebhookId, setWebhookRuleWebhookId] = useState('');
+  const [webhookRuleEnabled, setWebhookRuleEnabled] = useState(true);
   const [webhookRuleSaving, setWebhookRuleSaving] = useState(false);
+  const [togglingWebhookRuleId, setTogglingWebhookRuleId] = useState<number | null>(null);
 
   // Admin/Superadmin input states
   const [newAdminName, setNewAdminName] = useState('');
@@ -347,6 +351,7 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
       setRuleSubdomain(rule.subdomain || '');
       setRuleDomainId(rule.domainId.toString());
       setRuleDestId(rule.destinationId.toString());
+      setRuleEnabled(rule.enabled !== false);
     } else {
       setRulePattern('');
       setRuleSubdomain('');
@@ -357,8 +362,32 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
             : (domains[0]?.id?.toString() || ''));
       setRuleDomainId(defaultDomain);
       setRuleDestId(destinations[0]?.id?.toString() || '');
+      setRuleEnabled(true);
     }
     setForwardRuleModalOpen(true);
+  };
+
+  const toggleForwardRule = async (rule: ForwardRule) => {
+    const nextState = !(rule.enabled !== false);
+    setTogglingForwardRuleId(rule.id);
+    setForwardRules(prev => prev.map(r => r.id === rule.id ? { ...r, enabled: nextState } : r));
+    try {
+      const res = await fetch(`/api/forward-rules/${rule.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: nextState }),
+      });
+      if (!res.ok) {
+        setForwardRules(prev => prev.map(r => r.id === rule.id ? { ...r, enabled: !nextState } : r));
+        const data = await res.json() as any;
+        alert(`切换状态失败: ${data.error || '未知错误'}`);
+      }
+    } catch {
+      setForwardRules(prev => prev.map(r => r.id === rule.id ? { ...r, enabled: !nextState } : r));
+      alert('网络错误');
+    } finally {
+      setTogglingForwardRuleId(null);
+    }
   };
 
   const saveForwardRule = async (e: React.FormEvent) => {
@@ -376,6 +405,7 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
           subdomain: ruleSubdomain || null,
           domainId: parseInt(ruleDomainId),
           destinationId: parseInt(ruleDestId),
+          enabled: ruleEnabled,
         }),
       });
       if (res.ok) {
@@ -416,13 +446,38 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
       setWebhookRuleSubdomain(rule.subdomain || '');
       setWebhookRuleDomainId(rule.domainId.toString());
       setWebhookRuleWebhookId(rule.webhookId.toString());
+      setWebhookRuleEnabled(rule.enabled !== false);
     } else {
       setWebhookRulePattern('');
       setWebhookRuleSubdomain('');
       setWebhookRuleDomainId(domains[0]?.id?.toString() || '');
       setWebhookRuleWebhookId(webhooks[0]?.id?.toString() || '');
+      setWebhookRuleEnabled(true);
     }
     setWebhookRuleModalOpen(true);
+  };
+
+  const toggleWebhookRule = async (rule: WebhookRule) => {
+    const nextState = !(rule.enabled !== false);
+    setTogglingWebhookRuleId(rule.id);
+    setWebhookRules(prev => prev.map(r => r.id === rule.id ? { ...r, enabled: nextState } : r));
+    try {
+      const res = await fetch(`/api/webhook-rules/${rule.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: nextState }),
+      });
+      if (!res.ok) {
+        setWebhookRules(prev => prev.map(r => r.id === rule.id ? { ...r, enabled: !nextState } : r));
+        const data = await res.json() as any;
+        alert(`切换状态失败: ${data.error || '未知错误'}`);
+      }
+    } catch {
+      setWebhookRules(prev => prev.map(r => r.id === rule.id ? { ...r, enabled: !nextState } : r));
+      alert('网络错误');
+    } finally {
+      setTogglingWebhookRuleId(null);
+    }
   };
 
   const saveWebhookRule = async (e: React.FormEvent) => {
@@ -440,6 +495,7 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
           subdomain: webhookRuleSubdomain || null,
           domainId: parseInt(webhookRuleDomainId),
           webhookId: parseInt(webhookRuleWebhookId),
+          enabled: webhookRuleEnabled,
         }),
       });
       if (res.ok) {
@@ -1622,7 +1678,37 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                                     </tr>
                                   )}
                                   <tr className="hover:bg-gray-50/50">
-                                    <td className="px-4 py-3 font-mono font-semibold text-black">^{r.usernamePattern}$</td>
+                                    <td className="px-4 py-3">
+                                      <div className="flex items-center gap-2.5">
+                                        <button
+                                          type="button"
+                                          role="switch"
+                                          aria-checked={r.enabled !== false}
+                                          disabled={togglingForwardRuleId === r.id}
+                                          onClick={() => toggleForwardRule(r)}
+                                          className={`relative inline-flex h-4.5 w-8 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
+                                            (r.enabled !== false) ? 'bg-black' : 'bg-gray-300'
+                                          } ${togglingForwardRuleId === r.id ? 'opacity-50 cursor-wait' : ''}`}
+                                          title={r.enabled !== false ? '当前已启用，点击停用' : '当前已停用，点击启用'}
+                                        >
+                                          <span
+                                            className={`pointer-events-none inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out ${
+                                              (r.enabled !== false) ? 'translate-x-4' : 'translate-x-0.5'
+                                            }`}
+                                          />
+                                        </button>
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                          <span className={`font-mono text-xs ${r.enabled !== false ? 'font-semibold text-black' : 'text-gray-400 line-through'}`}>
+                                            ^{r.usernamePattern}$
+                                          </span>
+                                          {r.enabled === false && (
+                                            <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200/80 px-1.5 py-0.5 rounded leading-none shrink-0 font-sans">
+                                              已停用
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </td>
                                     <td className="px-4 py-3 font-mono text-gray-500">@{displayDomain}</td>
                                     <td className="px-4 py-3 font-mono font-medium">{dest?.email || '-'}</td>
                                     <td className="px-4 py-3 text-right space-x-2">
@@ -1817,7 +1903,37 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                         const displayDomain = r.subdomain ? `${r.subdomain}.${d?.domain || ''}` : (d?.domain || '');
                         return (
                           <tr key={r.id} className="hover:bg-gray-50/50">
-                            <td className="px-4 py-3 font-mono font-semibold text-black">^{r.usernamePattern}$</td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2.5">
+                                <button
+                                  type="button"
+                                  role="switch"
+                                  aria-checked={r.enabled !== false}
+                                  disabled={togglingWebhookRuleId === r.id}
+                                  onClick={() => toggleWebhookRule(r)}
+                                  className={`relative inline-flex h-4.5 w-8 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
+                                    (r.enabled !== false) ? 'bg-black' : 'bg-gray-300'
+                                  } ${togglingWebhookRuleId === r.id ? 'opacity-50 cursor-wait' : ''}`}
+                                  title={r.enabled !== false ? '当前已启用，点击停用' : '当前已停用，点击启用'}
+                                >
+                                  <span
+                                    className={`pointer-events-none inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out ${
+                                      (r.enabled !== false) ? 'translate-x-4' : 'translate-x-0.5'
+                                    }`}
+                                  />
+                                </button>
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <span className={`font-mono text-xs ${r.enabled !== false ? 'font-semibold text-black' : 'text-gray-400 line-through'}`}>
+                                    ^{r.usernamePattern}$
+                                  </span>
+                                  {r.enabled === false && (
+                                    <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200/80 px-1.5 py-0.5 rounded leading-none shrink-0 font-sans">
+                                      已停用
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
                             <td className="px-4 py-3 font-mono text-gray-500">@{displayDomain}</td>
                             <td className="px-4 py-3 font-semibold text-gray-800">{w?.name}</td>
                             <td className="px-4 py-3 text-right space-x-2">
@@ -2259,6 +2375,30 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                 </div>
               </div>
 
+              <div className="flex items-center justify-between p-2.5 bg-gray-50 border border-gray-100 rounded">
+                <div>
+                  <span className="font-semibold text-gray-800 block">启用规则</span>
+                  <span className="text-[11px] text-gray-500">停用后，匹配此规则的信件将返回标准的 550 5.2.1 拒信响应</span>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={ruleEnabled}
+                  disabled={forwardRuleSaving}
+                  onClick={() => setRuleEnabled(prev => !prev)}
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
+                    ruleEnabled ? 'bg-black' : 'bg-gray-300'
+                  }`}
+                  title={ruleEnabled ? '已启用' : '已停用'}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out ${
+                      ruleEnabled ? 'translate-x-4.5' : 'translate-x-0.5'
+                    }`}
+                  />
+                </button>
+              </div>
+
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
@@ -2358,6 +2498,30 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                     ))}
                   </select>
                 </div>
+              </div>
+
+              <div className="flex items-center justify-between p-2.5 bg-gray-50 border border-gray-100 rounded">
+                <div>
+                  <span className="font-semibold text-gray-800 block">启用规则</span>
+                  <span className="text-[11px] text-gray-500">停用后，匹配此规则的信件将返回标准的 550 5.2.1 拒信响应</span>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={webhookRuleEnabled}
+                  disabled={webhookRuleSaving}
+                  onClick={() => setWebhookRuleEnabled(prev => !prev)}
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
+                    webhookRuleEnabled ? 'bg-black' : 'bg-gray-300'
+                  }`}
+                  title={webhookRuleEnabled ? '已启用' : '已停用'}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out ${
+                      webhookRuleEnabled ? 'translate-x-4.5' : 'translate-x-0.5'
+                    }`}
+                  />
+                </button>
               </div>
 
               <div className="flex justify-end gap-2 pt-2">

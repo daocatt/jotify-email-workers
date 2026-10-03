@@ -47,6 +47,7 @@ export interface ForwardRule {
   subdomain: string | null;
   domainId: number;
   destinationId: number;
+  enabled?: boolean;
   createdAt: string;
 }
 
@@ -67,6 +68,7 @@ export interface WebhookRule {
   subdomain: string | null;
   domainId: number;
   webhookId: number;
+  enabled?: boolean;
   createdAt: string;
 }
 

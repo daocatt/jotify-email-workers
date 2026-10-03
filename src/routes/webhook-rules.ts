@@ -19,7 +19,7 @@ routes.post('/api/webhook-rules', async (c) => {
   const session = await getSessionUser(c);
   if (!session) return c.json({ error: 'Unauthorized' }, 401);
 
-  const { usernamePattern, subdomain, domainId, webhookId } = await c.req.json();
+  const { usernamePattern, subdomain, domainId, webhookId, enabled } = await c.req.json();
   if (!usernamePattern || !domainId || !webhookId) {
     return c.json({ error: 'Missing parameters' }, 400);
   }
@@ -65,6 +65,7 @@ routes.post('/api/webhook-rules', async (c) => {
     subdomain: cleanSubdomain,
     domainId,
     webhookId,
+    enabled: typeof enabled === 'boolean' ? enabled : true,
     createdAt: new Date(),
   });
   return c.json({ success: true });
@@ -88,7 +89,7 @@ routes.put('/api/webhook-rules/:id', async (c) => {
   if (!session) return c.json({ error: 'Unauthorized' }, 401);
 
   const id = parseInt(c.req.param('id'));
-  const { usernamePattern, subdomain, domainId, webhookId } = await c.req.json();
+  const { usernamePattern, subdomain, domainId, webhookId, enabled } = await c.req.json();
   if (!usernamePattern || !domainId || !webhookId) {
     return c.json({ error: 'Missing parameters' }, 400);
   }
@@ -129,16 +130,45 @@ routes.put('/api/webhook-rules/:id', async (c) => {
     return c.json({ error: '每个收信地址最多只能关联两个不同的 Webhook 接口' }, 400);
   }
 
+  const updateData: {
+    usernamePattern: string;
+    subdomain: string | null;
+    domainId: number;
+    webhookId: number;
+    enabled?: boolean;
+  } = {
+    usernamePattern,
+    subdomain: cleanSubdomain,
+    domainId,
+    webhookId,
+  };
+  if (typeof enabled === 'boolean') {
+    updateData.enabled = enabled;
+  }
+
   await db.update(schema.webhookRules)
-    .set({
-      usernamePattern,
-      subdomain: cleanSubdomain,
-      domainId,
-      webhookId,
-    })
+    .set(updateData)
     .where(and(eq(schema.webhookRules.id, id), eq(schema.webhookRules.userId, session.dbUser.id)));
 
   return c.json({ success: true });
+});
+
+routes.patch('/api/webhook-rules/:id', async (c) => {
+  const session = await getSessionUser(c);
+  if (!session) return c.json({ error: 'Unauthorized' }, 401);
+
+  const id = parseInt(c.req.param('id'));
+  const body = await c.req.json();
+  if (typeof body.enabled !== 'boolean') {
+    return c.json({ error: 'Invalid enabled parameter' }, 400);
+  }
+
+  const db = getDb(c.env.DB);
+  await db.update(schema.webhookRules)
+    .set({ enabled: body.enabled })
+    .where(and(eq(schema.webhookRules.id, id), eq(schema.webhookRules.userId, session.dbUser.id)));
+
+  return c.json({ success: true, enabled: body.enabled });
 });
 
 export default routes;

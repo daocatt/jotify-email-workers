@@ -19,7 +19,7 @@ routes.post('/api/forward-rules', async (c) => {
   const session = await getSessionUser(c);
   if (!session) return c.json({ error: 'Unauthorized' }, 401);
 
-  const { usernamePattern, subdomain, domainId, destinationId } = await c.req.json();
+  const { usernamePattern, subdomain, domainId, destinationId, enabled } = await c.req.json();
   if (!usernamePattern || !domainId || !destinationId) {
     return c.json({ error: 'Missing parameters' }, 400);
   }
@@ -49,6 +49,7 @@ routes.post('/api/forward-rules', async (c) => {
     subdomain: subdomain?.trim().toLowerCase() || null,
     domainId,
     destinationId,
+    enabled: typeof enabled === 'boolean' ? enabled : true,
     createdAt: new Date(),
   });
   return c.json({ success: true });
@@ -72,7 +73,7 @@ routes.put('/api/forward-rules/:id', async (c) => {
   if (!session) return c.json({ error: 'Unauthorized' }, 401);
 
   const id = parseInt(c.req.param('id'));
-  const { usernamePattern, subdomain, domainId, destinationId } = await c.req.json();
+  const { usernamePattern, subdomain, domainId, destinationId, enabled } = await c.req.json();
   if (!usernamePattern || !domainId || !destinationId) {
     return c.json({ error: 'Missing parameters' }, 400);
   }
@@ -96,16 +97,45 @@ routes.put('/api/forward-rules/:id', async (c) => {
     return c.json({ error: 'Invalid domain or destination' }, 400);
   }
 
+  const updateData: {
+    usernamePattern: string;
+    subdomain: string | null;
+    domainId: number;
+    destinationId: number;
+    enabled?: boolean;
+  } = {
+    usernamePattern,
+    subdomain: subdomain?.trim().toLowerCase() || null,
+    domainId,
+    destinationId,
+  };
+  if (typeof enabled === 'boolean') {
+    updateData.enabled = enabled;
+  }
+
   await db.update(schema.forwardRules)
-    .set({
-      usernamePattern,
-      subdomain: subdomain?.trim().toLowerCase() || null,
-      domainId,
-      destinationId,
-    })
+    .set(updateData)
     .where(and(eq(schema.forwardRules.id, id), eq(schema.forwardRules.userId, session.dbUser.id)));
 
   return c.json({ success: true });
+});
+
+routes.patch('/api/forward-rules/:id', async (c) => {
+  const session = await getSessionUser(c);
+  if (!session) return c.json({ error: 'Unauthorized' }, 401);
+
+  const id = parseInt(c.req.param('id'));
+  const body = await c.req.json();
+  if (typeof body.enabled !== 'boolean') {
+    return c.json({ error: 'Invalid enabled parameter' }, 400);
+  }
+
+  const db = getDb(c.env.DB);
+  await db.update(schema.forwardRules)
+    .set({ enabled: body.enabled })
+    .where(and(eq(schema.forwardRules.id, id), eq(schema.forwardRules.userId, session.dbUser.id)));
+
+  return c.json({ success: true, enabled: body.enabled });
 });
 
 export default routes;
