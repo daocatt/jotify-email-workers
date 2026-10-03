@@ -92,6 +92,7 @@ export const forwardRules = sqliteTable('forward_rules', {
   subdomain: text('subdomain'), // optional subdomain
   domainId: integer('domainId').notNull().references(() => domains.id, { onDelete: 'cascade' }),
   destinationId: integer('destinationId').notNull().references(() => destinations.id, { onDelete: 'cascade' }),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
   createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
 }, (table) => {
   return {
@@ -126,6 +127,7 @@ export const webhookRules = sqliteTable('webhook_rules', {
   subdomain: text('subdomain'), // optional subdomain
   domainId: integer('domainId').notNull().references(() => domains.id, { onDelete: 'cascade' }),
   webhookId: integer('webhookId').notNull().references(() => webhooks.id, { onDelete: 'cascade' }),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
   createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
 }, (table) => {
   return {

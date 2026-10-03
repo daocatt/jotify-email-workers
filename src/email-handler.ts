@@ -58,7 +58,7 @@ export async function handleEmail(message: ForwardableEmailMessage, env: Binding
   const db = getDb(env.DB);
   const parsedDomain = to.split('@')[1];
   if (!parsedDomain) {
-    message.setReject('Address not allowed');
+    message.setReject('5.1.3 Bad destination mailbox address syntax');
     return;
   }
 
@@ -74,7 +74,7 @@ export async function handleEmail(message: ForwardableEmailMessage, env: Binding
     }
     if (!matchedDomain) {
       console.warn(`[Email Worker] Domain ${parsedDomain} not registered. Rejecting.`);
-      message.setReject('Domain not registered');
+      message.setReject('5.1.2 Recipient domain not registered / Relay access denied');
       return;
     }
   }
@@ -123,6 +123,8 @@ export async function handleEmail(message: ForwardableEmailMessage, env: Binding
     ]);
 
     let ruleMatched = false;
+    let disabledRuleMatched = false;
+
     for (const r of allForwardRules) {
       if (parsedDomain !== r.domain && !parsedDomain.endsWith('.' + r.domain)) continue;
       if (r.rule.subdomain) {
@@ -136,6 +138,11 @@ export async function handleEmail(message: ForwardableEmailMessage, env: Binding
       }
       const matched = safeRegexTest(r.rule.usernamePattern, username);
       if (matched) {
+        if (r.rule.enabled === false) {
+          console.log(`[Email Worker] Match forwarding rule for ${maskEmail(to)}, but rule is disabled.`);
+          disabledRuleMatched = true;
+          continue;
+        }
         try {
           console.log(`[Email Worker] Match forwarding rule! Forwarding to: ${maskEmail(r.destination)}`);
           await message.forward(r.destination);
@@ -147,6 +154,7 @@ export async function handleEmail(message: ForwardableEmailMessage, env: Binding
     }
 
     let webhookMatched = false;
+    let disabledWebhookMatched = false;
 
     let parsedContent: {
       subject: string;
@@ -220,6 +228,12 @@ export async function handleEmail(message: ForwardableEmailMessage, env: Binding
       const matched = safeRegexTest(w.rule.usernamePattern, username);
       if (!matched) continue;
 
+      if (w.rule.enabled === false) {
+        console.log(`[Email Worker] Match webhook rule for ${maskEmail(to)}, but rule is disabled.`);
+        disabledWebhookMatched = true;
+        continue;
+      }
+
       try {
         console.log(`[Email Worker] Match webhook rule! Triggering HTTP POST to: ${w.webhook.url.replace(/\/\/[^@]+@/, '//***@')}`);
 
@@ -265,11 +279,21 @@ export async function handleEmail(message: ForwardableEmailMessage, env: Binding
       return;
     }
 
-    console.warn(`[Email Worker] No rule matched for ${maskEmail(to)}, rejecting.`);
-    message.setReject('Address not allowed');
+    if (disabledRuleMatched || disabledWebhookMatched) {
+      console.warn(`[Email Worker] Recipient ${maskEmail(to)} matches disabled rule(s). Rejecting.`);
+      message.setReject('5.2.1 Recipient address rejected: Mailbox disabled, not accepting messages');
+      await markDeliveryStatus(env.DB, dedupKey, 'rejected');
+      return;
+    }
+
+    console.warn(`[Email Worker] No rule matched for ${maskEmail(to)}, user unknown. Rejecting.`);
+    message.setReject('5.1.1 Recipient address rejected: User unknown');
     await markDeliveryStatus(env.DB, dedupKey, 'rejected');
   } catch (err) {
     console.error(`[Email Worker] Inbound processing error for ${maskEmail(to)}:`, err);
+    try {
+      message.setReject('5.3.0 Mail system internal processing error');
+    } catch {}
     await markDeliveryStatus(env.DB, dedupKey, 'failed');
   }
 }
