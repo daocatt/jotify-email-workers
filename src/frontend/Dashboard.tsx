@@ -775,16 +775,16 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
       </header>
 
       {/* Main Content container */}
-      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row gap-8">
+      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row gap-6">
 
         {/* Left navigation sidebar */}
-        <aside className={`${mobileMenuOpen ? 'flex' : 'hidden'} md:flex w-full md:w-56 shrink-0 flex-col gap-4`}>
+        <aside className={`${mobileMenuOpen ? 'flex' : 'hidden'} md:flex w-full md:w-40 lg:w-40 shrink-0 flex-col gap-3.5`}>
           {/* Group 0: Basic Config */}
           <div className="flex flex-col gap-1">
-            <div className="px-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">基础配置</div>
+            <div className="px-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">基础配置</div>
             <button
               onClick={() => { setActiveTab('domains'); setMobileMenuOpen(false); }}
-              className={`w-full text-left px-4 py-2 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'domains' ? 'bg-black text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+              className={`w-full text-left px-2.5 py-1.5 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors whitespace-nowrap ${activeTab === 'domains' ? 'bg-black text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
                 }`}
             >
               <Globe className="h-4 w-4" />
@@ -792,7 +792,7 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
             </button>
             <button
               onClick={() => { setActiveTab('destinations'); setMobileMenuOpen(false); }}
-              className={`w-full text-left px-4 py-2 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'destinations' ? 'bg-black text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+              className={`w-full text-left px-2.5 py-1.5 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors whitespace-nowrap ${activeTab === 'destinations' ? 'bg-black text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
                 }`}
             >
               <Mail className="h-4 w-4" />
@@ -802,10 +802,10 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
 
           {/* Group 1: Mail Forwarding */}
           <div className="flex flex-col gap-1 border-l-2 border-gray-100 pl-2">
-            <div className="px-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">邮件转发设置</div>
+            <div className="px-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">邮件转发设置</div>
             <button
               onClick={() => { setActiveTab('forwardRules'); setMobileMenuOpen(false); }}
-              className={`w-full text-left px-3 py-2 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'forwardRules' ? 'bg-black text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+              className={`w-full text-left px-2.5 py-1.5 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors whitespace-nowrap ${activeTab === 'forwardRules' ? 'bg-black text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
                 }`}
             >
               <Link className="h-4 w-4" />
@@ -815,10 +815,10 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
 
           {/* Group 2: Webhooks / API */}
           <div className="flex flex-col gap-1 border-l-2 border-emerald-100 pl-2">
-            <div className="px-2 text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-1.5">API 集成设置</div>
+            <div className="px-2 text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-1">API 集成设置</div>
             <button
               onClick={() => { setActiveTab('webhooks'); setMobileMenuOpen(false); }}
-              className={`w-full text-left px-3 py-2 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'webhooks' ? 'bg-black text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+              className={`w-full text-left px-2.5 py-1.5 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors whitespace-nowrap ${activeTab === 'webhooks' ? 'bg-black text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
                 }`}
             >
               <Server className="h-4 w-4" />
@@ -827,7 +827,7 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
 
             <button
               onClick={() => { setActiveTab('webhookRules'); setMobileMenuOpen(false); }}
-              className={`w-full text-left px-3 py-2 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'webhookRules' ? 'bg-black text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+              className={`w-full text-left px-2.5 py-1.5 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors whitespace-nowrap ${activeTab === 'webhookRules' ? 'bg-black text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
                 }`}
             >
               <Link className="h-4 w-4" />
@@ -836,7 +836,7 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
 
             <button
               onClick={() => { setActiveTab('failures'); setMobileMenuOpen(false); }}
-              className={`w-full text-left px-3 py-2 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'failures' ? 'bg-black text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+              className={`w-full text-left px-2.5 py-1.5 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors whitespace-nowrap ${activeTab === 'failures' ? 'bg-black text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
                 }`}
             >
               <XCircle className="h-4 w-4" />
@@ -846,10 +846,10 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
 
           {/* Group 2.5: Help Docs */}
           <div className="flex flex-col gap-1 border-l-2 border-gray-100 pl-2">
-            <div className="px-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">说明文档</div>
+            <div className="px-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">说明文档</div>
             <button
               onClick={() => { setActiveTab('help'); setMobileMenuOpen(false); }}
-              className={`w-full text-left px-3 py-2 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'help' ? 'bg-black text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+              className={`w-full text-left px-2.5 py-1.5 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors whitespace-nowrap ${activeTab === 'help' ? 'bg-black text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
                 }`}
             >
               <AlertCircle className="h-4 w-4" />
@@ -858,7 +858,7 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
             {onOpenDocs && (
               <button
                 onClick={() => { onOpenDocs(); setMobileMenuOpen(false); }}
-                className="w-full text-left px-3 py-2 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors text-blue-600 hover:bg-blue-50 border border-transparent hover:border-blue-100"
+                className="w-full text-left px-2.5 py-1.5 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors whitespace-nowrap text-blue-600 hover:bg-blue-50 border border-transparent hover:border-blue-100"
               >
                 <BookOpen className="h-4 w-4 text-blue-600" />
                 Webhook 开发文档 ↗
@@ -869,11 +869,11 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
           {/* Group 3: Admin Actions */}
           {(isAdmin || isSuperadmin) && (
             <div className="flex flex-col gap-1 border-t border-gray-150 pt-3 mt-1">
-              <div className="px-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">系统管理</div>
+              <div className="px-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">系统管理</div>
               {isAdmin && (
                 <button
                   onClick={() => { setActiveTab('admin'); setMobileMenuOpen(false); }}
-                  className={`w-full text-left px-4 py-2 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'admin' ? 'bg-black text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+                  className={`w-full text-left px-2.5 py-1.5 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors whitespace-nowrap ${activeTab === 'admin' ? 'bg-black text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
                     }`}
                 >
                   <Users className="h-4 w-4" />
@@ -884,7 +884,7 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
               {isSuperadmin && (
                 <button
                   onClick={() => { setActiveTab('superadmin'); setMobileMenuOpen(false); }}
-                  className={`w-full text-left px-4 py-2 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${activeTab === 'superadmin' ? 'bg-black text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
+                  className={`w-full text-left px-2.5 py-1.5 rounded text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors whitespace-nowrap ${activeTab === 'superadmin' ? 'bg-black text-white' : 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200'
                     }`}
                 >
                   <Users className="h-4 w-4" />
@@ -1083,9 +1083,9 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                     <tr>
                       <th className="px-4 py-3 text-left">Webhook</th>
                       <th className="px-4 py-3 text-left">Delivery ID</th>
-                      <th className="px-4 py-3 text-left">重试次数</th>
-                      <th className="px-4 py-3 text-left">失败时间</th>
-                      <th className="px-4 py-3 text-right">操作</th>
+                      <th className="px-4 py-3 text-left whitespace-nowrap">重试次数</th>
+                      <th className="px-4 py-3 text-left whitespace-nowrap">失败时间</th>
+                      <th className="px-4 py-3 text-right whitespace-nowrap w-24">操作</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-gray-700">
@@ -1097,23 +1097,25 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                             <div className="font-mono text-[10px] text-gray-400 max-w-[240px] truncate">{f.url}</div>
                           </td>
                           <td className="px-4 py-3 font-mono text-[10px] max-w-[200px] truncate" title={f.deliveryId}>{f.deliveryId}</td>
-                          <td className="px-4 py-3">{f.attempts}</td>
-                          <td className="px-4 py-3">{new Date(f.createdAt).toLocaleString()}</td>
-                          <td className="px-4 py-3 text-right whitespace-nowrap">
-                            <button
-                              onClick={() => retryFailure(f.id)}
-                              className="text-emerald-600 hover:text-emerald-800 mr-3 cursor-pointer"
-                              title="重新投递"
-                            >
-                              <RefreshCw className="h-4 w-4 inline" />
-                            </button>
-                            <button
-                              onClick={() => deleteFailure(f.id)}
-                              className="text-red-500 hover:text-red-700 cursor-pointer"
-                              title="删除记录"
-                            >
-                              <Trash2 className="h-4 w-4 inline" />
-                            </button>
+                          <td className="px-4 py-3 whitespace-nowrap">{f.attempts}</td>
+                          <td className="px-4 py-3 whitespace-nowrap">{new Date(f.createdAt).toLocaleString()}</td>
+                          <td className="px-4 py-3 text-right whitespace-nowrap w-24">
+                            <div className="inline-flex items-center justify-end gap-1.5 shrink-0">
+                              <button
+                                onClick={() => retryFailure(f.id)}
+                                className="text-gray-400 hover:text-emerald-600 cursor-pointer p-1 rounded hover:bg-emerald-50 transition-colors"
+                                title="重新投递"
+                              >
+                                <RefreshCw className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => deleteFailure(f.id)}
+                                className="text-gray-400 hover:text-red-600 cursor-pointer p-1 rounded hover:bg-red-50 transition-colors"
+                                title="删除记录"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -1174,7 +1176,7 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                     <tr>
                       <th className="px-4 py-3 text-left">域名</th>
                       <th className="px-4 py-3 text-left">创建时间</th>
-                      <th className="px-4 py-3 text-right">操作</th>
+                      <th className="px-4 py-3 text-right whitespace-nowrap w-24">操作</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-gray-700">
@@ -1183,10 +1185,10 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                         <tr key={d.id} className="hover:bg-gray-50/50">
                           <td className="px-4 py-3 font-mono font-semibold">{d.domain}</td>
                           <td className="px-4 py-3">{new Date(d.createdAt).toLocaleString()}</td>
-                          <td className="px-4 py-3 text-right">
+                          <td className="px-4 py-3 text-right whitespace-nowrap w-24">
                             <button
                               onClick={() => deleteDomain(d.id)}
-                              className="text-red-500 hover:text-red-700 cursor-pointer"
+                              className="text-red-500 hover:text-red-700 cursor-pointer p-1 rounded hover:bg-red-50 transition-colors"
                             >
                               <Trash2 className="h-4 w-4 inline" />
                             </button>
@@ -1243,7 +1245,7 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                     <tr>
                       <th className="px-4 py-3 text-left">目标邮箱地址</th>
                       <th className="px-4 py-3 text-left">创建时间</th>
-                      <th className="px-4 py-3 text-right">操作</th>
+                      <th className="px-4 py-3 text-right whitespace-nowrap w-24">操作</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-gray-700">
@@ -1252,13 +1254,16 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                         <tr key={d.id} className="hover:bg-gray-50/50">
                           <td className="px-4 py-3 font-mono font-semibold">{d.email}</td>
                           <td className="px-4 py-3">{new Date(d.createdAt).toLocaleString()}</td>
-                          <td className="px-4 py-3 text-right">
-                            <button
-                              onClick={() => deleteDestination(d.id)}
-                              className="text-red-500 hover:text-red-700 cursor-pointer"
-                            >
-                              <Trash2 className="h-4 w-4 inline" />
-                            </button>
+                          <td className="px-4 py-3 text-right whitespace-nowrap w-24">
+                            <div className="inline-flex items-center justify-end shrink-0">
+                              <button
+                                onClick={() => deleteDestination(d.id)}
+                                className="text-gray-400 hover:text-red-600 cursor-pointer p-1 rounded hover:bg-red-50 transition-colors"
+                                title="删除"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -1367,7 +1372,7 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                 {/* Two column layout */}
                 <div className="flex flex-col lg:flex-row gap-6 items-start">
                   {/* Left Column: Domain List */}
-                  <div className="w-full lg:w-64 xl:w-72 shrink-0 bg-white border border-gray-200/80 rounded-lg p-3 space-y-3 shadow-xs">
+                  <div className="w-full lg:w-52 xl:w-56 shrink-0 bg-white border border-gray-200/80 rounded-lg p-3 space-y-3 shadow-xs">
                     <div className="flex items-center justify-between px-1">
                       <div className="flex items-center gap-1.5 text-xs font-bold text-gray-900">
                         <Globe className="h-3.5 w-3.5 text-gray-500" />
@@ -1540,10 +1545,10 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                       <table className="min-w-full divide-y divide-gray-100 text-xs">
                         <thead className="bg-gray-50 font-semibold text-gray-700">
                           <tr>
-                            <th className="px-4 py-3 text-left">用户名正则</th>
-                            <th className="px-4 py-3 text-left">
-                              <div className="flex items-center gap-1.5">
-                                <span>匹配收信域名</span>
+                            <th className="px-4 py-3 text-left whitespace-nowrap">用户名正则</th>
+                            <th className="px-4 py-3 text-left whitespace-nowrap">
+                              <div className="flex items-center gap-1.5 whitespace-nowrap">
+                                <span className="whitespace-nowrap">匹配收信域名</span>
                                 <div className="relative inline-block text-left" ref={domainFilterDropdownRef}>
                                   <button
                                     type="button"
@@ -1649,8 +1654,8 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                                 )}
                               </div>
                             </th>
-                            <th className="px-4 py-3 text-left">转发至目标</th>
-                            <th className="px-4 py-3 text-right">操作</th>
+                            <th className="px-4 py-3 text-left whitespace-nowrap">转发至目标</th>
+                            <th className="px-4 py-3 text-right whitespace-nowrap w-24">操作</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 text-gray-700">
@@ -1709,23 +1714,25 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                                         </div>
                                       </div>
                                     </td>
-                                    <td className="px-4 py-3 font-mono text-gray-500">@{displayDomain}</td>
-                                    <td className="px-4 py-3 font-mono font-medium">{dest?.email || '-'}</td>
-                                    <td className="px-4 py-3 text-right space-x-2">
-                                      <button
-                                        onClick={() => openForwardRuleModal(r)}
-                                        className="text-gray-500 hover:text-gray-600 cursor-pointer"
-                                        title="编辑"
-                                      >
-                                        <Edit className="h-4 w-4 inline" />
-                                      </button>
-                                      <button
-                                        onClick={() => deleteForwardRule(r.id)}
-                                        className="text-red-500 hover:text-red-700 cursor-pointer"
-                                        title="删除"
-                                      >
-                                        <Trash2 className="h-4 w-4 inline" />
-                                      </button>
+                                    <td className="px-4 py-3 font-mono text-gray-500 whitespace-nowrap">@{displayDomain}</td>
+                                    <td className="px-4 py-3 font-mono font-medium truncate max-w-[240px]">{dest?.email || '-'}</td>
+                                    <td className="px-4 py-3 text-right whitespace-nowrap w-24">
+                                      <div className="inline-flex items-center justify-end gap-1.5 shrink-0">
+                                        <button
+                                          onClick={() => openForwardRuleModal(r)}
+                                          className="text-gray-400 hover:text-black cursor-pointer p-1 rounded hover:bg-gray-100 transition-colors"
+                                          title="编辑"
+                                        >
+                                          <Edit className="h-4 w-4" />
+                                        </button>
+                                        <button
+                                          onClick={() => deleteForwardRule(r.id)}
+                                          className="text-gray-400 hover:text-red-600 cursor-pointer p-1 rounded hover:bg-red-50 transition-colors"
+                                          title="删除"
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </button>
+                                      </div>
                                     </td>
                                   </tr>
                                 </React.Fragment>
@@ -1821,34 +1828,36 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                       <th className="px-4 py-3 text-left">接口名称</th>
                       <th className="px-4 py-3 text-left">接口 URL</th>
                       <th className="px-4 py-3 text-left">鉴权认证方式 / 密钥</th>
-                      <th className="px-4 py-3 text-right">操作</th>
+                      <th className="px-4 py-3 text-right whitespace-nowrap w-24">操作</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-gray-700">
                     {webhooks.length > 0 ? (
                       getPaginatedItems(webhooks, webhooksPage).map(w => (
                         <tr key={w.id} className="hover:bg-gray-50/50">
-                          <td className="px-4 py-3 font-semibold text-gray-800">{w.name}</td>
+                          <td className="px-4 py-3 font-semibold text-gray-800 whitespace-nowrap">{w.name}</td>
                           <td className="px-4 py-3 font-mono text-gray-500 truncate max-w-xs" title={w.url}>{w.url}</td>
                           <td className="px-4 py-3 font-mono">
                             <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded mr-1.5 text-[10px] font-semibold">{w.authType}</span>
                             <span className="text-gray-400">{obscureToken(w.authType, w.authToken)}</span>
                           </td>
-                          <td className="px-4 py-3 text-right space-x-2">
-                            <button
-                              onClick={() => openWebhookModal(w)}
-                              className="text-gray-500 hover:text-gray-600 cursor-pointer"
-                              title="编辑"
-                            >
-                              <Edit className="h-4 w-4 inline" />
-                            </button>
-                            <button
-                              onClick={() => deleteWebhook(w.id)}
-                              className="text-red-500 hover:text-red-700 cursor-pointer"
-                              title="删除"
-                            >
-                              <Trash2 className="h-4 w-4 inline" />
-                            </button>
+                          <td className="px-4 py-3 text-right whitespace-nowrap w-24">
+                            <div className="inline-flex items-center justify-end gap-1.5 shrink-0">
+                              <button
+                                onClick={() => openWebhookModal(w)}
+                                className="text-gray-400 hover:text-black cursor-pointer p-1 rounded hover:bg-gray-100 transition-colors"
+                                title="编辑"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => deleteWebhook(w.id)}
+                                className="text-gray-400 hover:text-red-600 cursor-pointer p-1 rounded hover:bg-red-50 transition-colors"
+                                title="删除"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -1889,10 +1898,10 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                 <table className="min-w-full divide-y divide-gray-100 text-xs">
                   <thead className="bg-gray-50 font-semibold text-gray-700">
                     <tr>
-                      <th className="px-4 py-3 text-left">用户名正则</th>
-                      <th className="px-4 py-3 text-left">域名</th>
-                      <th className="px-4 py-3 text-left">触发 Webhook 接口</th>
-                      <th className="px-4 py-3 text-right">操作</th>
+                      <th className="px-4 py-3 text-left whitespace-nowrap">用户名正则</th>
+                      <th className="px-4 py-3 text-left whitespace-nowrap">域名</th>
+                      <th className="px-4 py-3 text-left whitespace-nowrap">触发 Webhook 接口</th>
+                      <th className="px-4 py-3 text-right whitespace-nowrap w-24">操作</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-gray-700">
@@ -1934,23 +1943,25 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                                 </div>
                               </div>
                             </td>
-                            <td className="px-4 py-3 font-mono text-gray-500">@{displayDomain}</td>
-                            <td className="px-4 py-3 font-semibold text-gray-800">{w?.name}</td>
-                            <td className="px-4 py-3 text-right space-x-2">
-                              <button
-                                onClick={() => openWebhookRuleModal(r)}
-                                className="text-gray-500 hover:text-gray-600 cursor-pointer"
-                                title="编辑"
-                              >
-                                <Edit className="h-4 w-4 inline" />
-                              </button>
-                              <button
-                                onClick={() => deleteWebhookRule(r.id)}
-                                className="text-red-500 hover:text-red-700 cursor-pointer"
-                                title="删除"
-                              >
-                                <Trash2 className="h-4 w-4 inline" />
-                              </button>
+                            <td className="px-4 py-3 font-mono text-gray-500 whitespace-nowrap">@{displayDomain}</td>
+                            <td className="px-4 py-3 font-semibold text-gray-800 truncate max-w-[200px]">{w?.name}</td>
+                            <td className="px-4 py-3 text-right whitespace-nowrap w-24">
+                              <div className="inline-flex items-center justify-end gap-1.5 shrink-0">
+                                <button
+                                  onClick={() => openWebhookRuleModal(r)}
+                                  className="text-gray-400 hover:text-black cursor-pointer p-1 rounded hover:bg-gray-100 transition-colors"
+                                  title="编辑"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => deleteWebhookRule(r.id)}
+                                  className="text-gray-400 hover:text-red-600 cursor-pointer p-1 rounded hover:bg-red-50 transition-colors"
+                                  title="删除"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
