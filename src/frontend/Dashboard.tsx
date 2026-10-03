@@ -1157,13 +1157,13 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                   disabled={isAddingDomain}
                   value={newDomain}
                   onChange={e => setNewDomain(e.target.value)}
-                  className="flex-1 text-xs px-3.5 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
+                  className="flex-1 h-9 text-xs px-3.5 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
                   placeholder="e.g. example.com"
                 />
                 <button
                   type="submit"
                   disabled={isAddingDomain}
-                  className="px-4 py-2 bg-black text-white text-xs font-semibold rounded hover:bg-gray-800 flex items-center gap-1 cursor-pointer shrink-0 transition-colors disabled:opacity-50"
+                  className="h-9 px-4 bg-black text-white text-xs font-semibold rounded hover:bg-gray-800 flex items-center gap-1 cursor-pointer shrink-0 transition-colors disabled:opacity-50"
                 >
                   <Plus className="h-4 w-4" />
                   {isAddingDomain ? '添加中...' : '添加域名'}
@@ -1226,13 +1226,13 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                   disabled={isAddingDestination}
                   value={newDestination}
                   onChange={e => setNewDestination(e.target.value)}
-                  className="flex-1 text-xs px-3.5 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
+                  className="flex-1 h-9 text-xs px-3.5 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
                   placeholder="e.g. my-private-email@gmail.com"
                 />
                 <button
                   type="submit"
                   disabled={isAddingDestination}
-                  className="px-4 py-2 bg-black text-white text-xs font-semibold rounded hover:bg-gray-800 flex items-center gap-1 cursor-pointer shrink-0 transition-colors disabled:opacity-50"
+                  className="h-9 px-4 bg-black text-white text-xs font-semibold rounded hover:bg-gray-800 flex items-center gap-1 cursor-pointer shrink-0 transition-colors disabled:opacity-50"
                 >
                   <Plus className="h-4 w-4" />
                   {isAddingDestination ? '添加中...' : '添加目标'}
@@ -2239,7 +2239,7 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                   disabled={webhookSaving}
                   value={webhookName}
                   onChange={e => setWebhookName(e.target.value)}
-                  className="w-full text-xs px-3 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
+                  className="w-full h-9 text-xs px-3 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
                   placeholder="e.g. 我的飞书机器人"
                 />
               </div>
@@ -2252,7 +2252,7 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                   disabled={webhookSaving}
                   value={webhookUrl}
                   onChange={e => setWebhookUrl(e.target.value)}
-                  className="w-full text-xs px-3 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
+                  className="w-full h-9 text-xs px-3 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
                   placeholder="https://..."
                 />
               </div>
@@ -2264,7 +2264,7 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                     value={webhookAuthType}
                     disabled={webhookSaving}
                     onChange={e => setWebhookAuthType(e.target.value)}
-                    className="w-full text-xs px-3 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
+                    className="w-full h-9 bg-white text-xs px-3 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50 cursor-pointer"
                   >
                     <option value="none">无 (None)</option>
                     <option value="bearer">Bearer Token</option>
@@ -2279,7 +2279,7 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                     value={webhookAuthToken}
                     onChange={e => setWebhookAuthToken(e.target.value)}
                     disabled={webhookAuthType === 'none' || webhookSaving}
-                    className="w-full text-xs px-3 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
+                    className="w-full h-9 text-xs px-3 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
                     placeholder={webhookAuthType === 'header' ? 'X-Secret: my_value' : 'Enter secret token'}
                   />
                 </div>
@@ -2334,7 +2334,7 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                     disabled={forwardRuleSaving}
                     value={rulePattern}
                     onChange={e => setRulePattern(e.target.value)}
-                    className="w-full text-xs px-3 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
+                    className="w-full h-9 text-xs px-3 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
                     placeholder="e.g. u.* 或 co"
                   />
                 </div>
@@ -2346,7 +2346,7 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                     disabled={forwardRuleSaving}
                     value={ruleSubdomain}
                     onChange={e => setRuleSubdomain(e.target.value)}
-                    className="w-full text-xs px-3 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
+                    className="w-full h-9 text-xs px-3 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
                     placeholder="e.g. mail"
                   />
                 </div>
@@ -2360,7 +2360,7 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                     value={ruleDomainId}
                     disabled={forwardRuleSaving}
                     onChange={e => setRuleDomainId(e.target.value)}
-                    className="w-full text-xs px-3 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50 font-mono"
+                    className="w-full h-9 bg-white text-xs px-3 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50 font-mono cursor-pointer"
                   >
                     <option value="">-- 选择域名 --</option>
                     {domains.map(d => (
@@ -2376,7 +2376,7 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                     value={ruleDestId}
                     disabled={forwardRuleSaving}
                     onChange={e => setRuleDestId(e.target.value)}
-                    className="w-full text-xs px-3 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50 font-mono"
+                    className="w-full h-9 bg-white text-xs px-3 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50 font-mono cursor-pointer"
                   >
                     <option value="">-- 选择转发目标 --</option>
                     {destinations.map(dest => (
@@ -2459,7 +2459,7 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                     disabled={webhookRuleSaving}
                     value={webhookRulePattern}
                     onChange={e => setWebhookRulePattern(e.target.value)}
-                    className="w-full text-xs px-3 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
+                    className="w-full h-9 text-xs px-3 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
                     placeholder="e.g. jot_* 或 .+"
                   />
                 </div>
@@ -2471,7 +2471,7 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                     disabled={webhookRuleSaving}
                     value={webhookRuleSubdomain}
                     onChange={e => setWebhookRuleSubdomain(e.target.value)}
-                    className="w-full text-xs px-3 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
+                    className="w-full h-9 text-xs px-3 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
                     placeholder="e.g. mail"
                   />
                 </div>
@@ -2485,7 +2485,7 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                     value={webhookRuleDomainId}
                     disabled={webhookRuleSaving}
                     onChange={e => setWebhookRuleDomainId(e.target.value)}
-                    className="w-full text-xs px-3 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50 font-mono"
+                    className="w-full h-9 bg-white text-xs px-3 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50 font-mono cursor-pointer"
                   >
                     <option value="">-- 选择域名 --</option>
                     {domains.map(d => (
@@ -2501,7 +2501,7 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                     value={webhookRuleWebhookId}
                     disabled={webhookRuleSaving}
                     onChange={e => setWebhookRuleWebhookId(e.target.value)}
-                    className="w-full text-xs px-3 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50 font-mono"
+                    className="w-full h-9 bg-white text-xs px-3 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50 font-mono cursor-pointer"
                   >
                     <option value="">-- 选择 Webhook --</option>
                     {webhooks.map(w => (
@@ -2574,7 +2574,7 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                   disabled={isChangingPassword}
                   value={oldPassword}
                   onChange={e => setOldPassword(e.target.value)}
-                  className="w-full text-xs px-3 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
+                  className="w-full h-9 text-xs px-3 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
                   placeholder="输入当前密码"
                 />
               </div>
@@ -2586,7 +2586,7 @@ export default function Dashboard({ user, config, onLogout, onOpenDocs, forceCha
                   disabled={isChangingPassword}
                   value={newPassword}
                   onChange={e => setNewPassword(e.target.value)}
-                  className="w-full text-xs px-3 py-2 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
+                  className="w-full h-9 text-xs px-3 border border-gray-200 rounded focus:outline-hidden focus:border-black focus:ring-0 disabled:opacity-50"
                   placeholder="最少 6 位"
                 />
               </div>
