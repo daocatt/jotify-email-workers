@@ -1,7 +1,7 @@
 {
   "name": "jotify-email-workers",
   "main": "src/index.ts",
-  "compatibility_date": "2025-02-24",
+  "compatibility_date": "2026-10-19",
   "compatibility_flags": [
     "nodejs_compat"
   ],

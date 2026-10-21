@@ -102,7 +102,7 @@ graph TD
 1. 运行数据库迁移应用到线上 D1 数据库：
 
    ```bash
-   npx wrangler d1 migrations apply DB --remote
+   HOME=~/.wrangler-a npx wrangler d1 migrations apply DB --remote
    ```
 
 2. 编译并部署 Worker：
@@ -111,6 +111,16 @@ graph TD
    npm run build
    npm run deploy
    ```
+
+   > **凭据目录**：这个 Worker 属于 `uulele@gmail.com` 账号，必须走 `~/.wrangler-a`。
+   > `npm run deploy` 已内联 `HOME`；手动跑 `npx wrangler ...` 时要写成
+   > `HOME=~/.wrangler-a npx wrangler ...`，否则默认 `~/.wrangler` 里的另一个账号
+   > 会报 `Authentication error [code: 10000]`。
+
+   **工具链**：Node **24.22.1+**（`engines.node` + `.nvmrc`）、wrangler **4.151.3**、
+   `@cloudflare/workers-types` **5.20261021.1**、`compatibility_date` **2026-10-19**
+   （wrangler 内置 workerd `1.20261019.1` 能接受的最新日期；`wrangler.json` 不入库，
+   改的时候记得同步 `wrangler.json.example`）。
 
 3. **域名绑定与邮件路由**：
    在 Cloudflare 控制台中将目标域名的 **Email Routing** 开启 **Catch-all** 规则，并将其直接路由到你部署的 `jotify-email-workers`。
